@@ -54,7 +54,7 @@ def main():
         sp.add_argument("--subs", default="zh,en", help="burned-in subtitle languages for vertical: zh,en | en | zh | none")
         sp.add_argument("--only", choices=["horizontal", "vertical"])
         sp.add_argument("--burn-horizontal", action="store_true", help="also burn subtitles into the horizontal video")
-        sp.add_argument("--test", type=float, help="render only the first N seconds (quick check)")
+        sp.add_argument("--test", type=float, help="render only the first N seconds to *-test.mp4 (quick check)")
 
     pa = sub.add_parser("all", help="prep + clean + render")
     pa.add_argument("folder")

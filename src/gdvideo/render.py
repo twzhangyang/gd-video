@@ -2,8 +2,8 @@
 import json
 import sys
 
-from gdvideo.config import (FFMPEG, GAME_VOLUME, LOUDNESS, PIP_BORDER, PIP_MARGIN, PIP_TOP, PIP_WIDTH, SUB_GAP,
-                            V_BG, V_H, V_W, VOICE_VOLUME)
+from gdvideo.config import (FFMPEG, GAME_VOLUME, LOUDNESS, PIP_BORDER, PIP_MARGIN, PIP_TOP, PIP_WIDTH, SUB_FONT,
+                            SUB_GAP, V_BG, V_H, V_W, VOICE_VOLUME)
 from gdvideo.media import detect_side_bars, encode_args, probe, run
 from gdvideo.subtitles import is_cleaned, write_ass, write_srt
 
@@ -21,8 +21,10 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
     fw, fh, _ = probe(folder / "face.mov")
     gw, gx = detect_side_bars(folder / "ipad.mov", dur)
     game_v = f"[0:v]crop={gw}:{gh}:{gx}:0,fps=60"
+    suffix = ""
     if test:
         dur = min(dur, test)
+        suffix = "-test"  # never overwrite the full videos with a test clip
 
     write_srt(cues, out / "en.srt", ["en"])
     write_srt(cues, out / "zh.srt", ["zh"])
@@ -46,9 +48,9 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
               f"[g][f]overlay=W-w-{PIP_MARGIN}:{PIP_TOP}:eof_action=repeat[v]")
         if burn_horizontal:
             write_srt(cues, work / "h.srt", subs.split(","))
-            vf = vf[:-3] + "[v0];[v0]subtitles=h.srt:force_style='FontName=PingFang SC,FontSize=18,Outline=2'[v]"
+            vf = vf[:-3] + f"[v0];[v0]subtitles=h.srt:force_style='FontName={SUB_FONT},FontSize=18,Outline=2'[v]"
         run([FFMPEG, "-v", "warning", "-stats", "-y", *inputs, "-filter_complex", f"{vf};{audio}",
-             "-map", "[v]", "-map", "[a]", "-t", str(dur), *encode_args("16M"), str(out / "horizontal.mp4")],
+             "-map", "[v]", "-map", "[a]", "-t", str(dur), *encode_args("16M"), str(out / f"horizontal{suffix}.mp4")],
             cwd=work)
 
     if only in (None, "vertical"):
@@ -60,7 +62,7 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
               f"[bg][f]overlay=0:0:eof_action=repeat[b1];[b1][g]overlay=0:{face_h}:eof_action=repeat,"
               f"subtitles=v.ass[v]")
         run([FFMPEG, "-v", "warning", "-stats", "-y", *inputs, "-filter_complex", f"{vf};{audio}",
-             "-map", "[v]", "-map", "[a]", "-t", str(dur), *encode_args("12M"), str(out / "vertical.mp4")],
+             "-map", "[v]", "-map", "[a]", "-t", str(dur), *encode_args("12M"), str(out / f"vertical{suffix}.mp4")],
             cwd=work)
 
     print(f"Done: {out}", file=sys.stderr)

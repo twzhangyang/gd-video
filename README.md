@@ -108,7 +108,7 @@ Sends the raw cues and `glossary.md` to Claude (`claude-opus-5-5` through the An
 | `--subs zh,en` (default) / `en` / `zh` / `none` | Languages burned into the vertical video. `none` gives a clean video for editing in 剪映 |
 | `--only horizontal` / `--only vertical` | Render one format |
 | `--burn-horizontal` | Also burn subtitles into the horizontal video |
-| `--test 20` | Render only the first 20 s for a quick check |
+| `--test 20` | Render only the first 20 s to `horizontal-test.mp4` / `vertical-test.mp4` for a quick check; the full videos are left alone |
 
 These options also work with `all`. Rendering both formats takes about 2 minutes for a 3-minute video on an M4 Pro.
 
