@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from gdvideo.clean import clean
+from gdvideo.post import post
 from gdvideo.render import render
 from gdvideo.transcribe import prep
 
@@ -15,13 +16,14 @@ Folder layout (one folder per video):
     <folder>/face.mov   facecam (voice only)
 
 Commands:
-    all    <folder>   prep + clean + render, skipping steps whose output already exists
+    all    <folder>   prep + clean + post + render, skipping steps whose output already exists
     prep   <folder>   sync + transcribe -> <folder>/work/subs.raw.json
     clean  <folder>   Claude cleans + translates the raw cues -> <folder>/subs.json
-    render <folder>   subs.json -> <folder>/export/{horizontal,vertical}.mp4 + .srt files
+    post   <folder>   Claude writes titles, descriptions and hashtags -> <folder>/post.md
+    render <folder>   subs.json -> <folder>/export/{horizontal,vertical-<langs>}.mp4 + .srt files
 
-work/ and export/ are disposable; the cleaned subs.json lives next to the recordings.
-clean needs Anthropic API credentials (ANTHROPIC_API_KEY).
+work/ and export/ are disposable; subs.json and post.md live next to the recordings.
+clean and post need Anthropic API credentials (ANTHROPIC_API_KEY).
 """
 
 
@@ -34,6 +36,10 @@ def run_all(folder, args):
         print("Skipping clean: subs.json exists", file=sys.stderr)
     else:
         clean(folder, args.force)
+    if (folder / "post.md").exists() and not args.force:
+        print("Skipping post: post.md exists", file=sys.stderr)
+    else:
+        post(folder, args.level, args.notes, args.force)
     run_render(folder, args)
 
 
@@ -56,10 +62,15 @@ def main():
         sp.add_argument("--burn-horizontal", action="store_true", help="also burn subtitles into the horizontal video")
         sp.add_argument("--test", type=float, help="render only the first N seconds to *-test.mp4 (quick check)")
 
-    pa = sub.add_parser("all", help="prep + clean + render")
+    def add_post_args(sp):
+        sp.add_argument("--level", help="level name, if the transcript doesn't make it clear")
+        sp.add_argument("--notes", help="extra context for the posting text, e.g. \"first try at all 3 coins\"")
+
+    pa = sub.add_parser("all", help="prep + clean + post + render")
     pa.add_argument("folder")
-    pa.add_argument("--force", action="store_true", help="redo prep and clean even if their output exists")
+    pa.add_argument("--force", action="store_true", help="redo prep, clean and post even if their output exists")
     add_prep_args(pa)
+    add_post_args(pa)
     add_render_args(pa)
     pp = sub.add_parser("prep", help="sync + transcribe")
     pp.add_argument("folder")
@@ -67,6 +78,10 @@ def main():
     pc = sub.add_parser("clean", help="clean + translate subtitles with Claude")
     pc.add_argument("folder")
     pc.add_argument("--force", action="store_true", help="replace an existing subs.json")
+    po = sub.add_parser("post", help="write titles, descriptions and hashtags with Claude")
+    po.add_argument("folder")
+    po.add_argument("--force", action="store_true", help="replace an existing post.md")
+    add_post_args(po)
     pr = sub.add_parser("render", help="render both videos")
     pr.add_argument("folder")
     add_render_args(pr)
@@ -77,6 +92,7 @@ def main():
         "all": lambda: run_all(folder, args),
         "prep": lambda: prep(folder, args.offset, args.lang),
         "clean": lambda: clean(folder, args.force),
+        "post": lambda: post(folder, args.level, args.notes, args.force),
         "render": lambda: run_render(folder, args),
     }
     commands[args.cmd]()

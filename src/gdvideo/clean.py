@@ -2,7 +2,8 @@
 import json
 import sys
 
-from gdvideo.config import CLAUDE_EFFORT, CLAUDE_MODEL, GLOSSARY
+from gdvideo.claude import ask_json
+from gdvideo.config import GLOSSARY
 
 CLEAN_SCHEMA = {
     "type": "object",
@@ -58,8 +59,6 @@ def tidy_cues(cues):
 
 
 def clean(folder, force=False):
-    import anthropic
-
     raw_path = folder / "work" / "subs.raw.json"
     if not raw_path.exists():
         sys.exit(f"{raw_path} not found. Run prep first (or use: gdvideo all <folder>).")
@@ -68,43 +67,15 @@ def clean(folder, force=False):
     if subs.exists() and not force:
         sys.exit(f"{subs} already exists. Use --force to replace it with a fresh cleanup.")
 
-    print(f"Cleaning {len(raw['cues'])} cues with {CLAUDE_MODEL}...", file=sys.stderr)
     cues_in = [{"start": c["start"], "end": c["end"], "text": c["src"]} for c in raw["cues"]]
     prompt = CLEAN_PROMPT.format(language=raw["language"], glossary=GLOSSARY.read_text() if GLOSSARY.exists() else "",
                                  cues=json.dumps(cues_in, ensure_ascii=False, indent=1))
-    client = anthropic.Anthropic()
-    try:
-        with client.beta.messages.stream(
-            model=CLAUDE_MODEL,
-            max_tokens=64000,
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-            thinking={"type": "adaptive"},
-            output_config={"effort": CLAUDE_EFFORT, "format": {"type": "json_schema", "schema": CLEAN_SCHEMA}},
-            messages=[{"role": "user", "content": prompt}],
-        ) as stream:
-            response = stream.get_final_message()
-    except (anthropic.AuthenticationError, TypeError) as e:
-        # TypeError: the SDK found no credentials at all
-        if isinstance(e, TypeError) and "authentication" not in str(e):
-            raise
-        sys.exit("Anthropic API credentials are missing or invalid. Set ANTHROPIC_API_KEY (see README).")
-    except anthropic.APIConnectionError as e:
-        sys.exit(f"Could not reach the Anthropic API: {e}")
-    except anthropic.APIStatusError as e:
-        sys.exit(f"Anthropic API error {e.status_code}: {e.message}")
-
-    if response.stop_reason == "refusal":
-        sys.exit("Claude declined to clean these subtitles. Clean subs.json by hand or try again.")
-    if response.stop_reason == "max_tokens":
-        sys.exit("Claude's answer was cut off (max_tokens). Try again or split the video.")
-    result = json.loads(next(b.text for b in response.content if b.type == "text"))
+    result = ask_json(prompt, CLEAN_SCHEMA, f"Cleaning {len(raw['cues'])} cues")
 
     cues = tidy_cues(result["cues"])
     subs.write_text(json.dumps({"offset": raw["offset"], "language": raw["language"], "cues": cues},
                                ensure_ascii=False, indent=1))
-    print(f"Wrote {subs}: {len(cues)} cues (tokens in/out: {response.usage.input_tokens}/"
-          f"{response.usage.output_tokens})", file=sys.stderr)
+    print(f"Wrote {subs}: {len(cues)} cues", file=sys.stderr)
 
     lines = [f"{int(r['start']) // 60}:{int(r['start']) % 60:02d}  {r['text']}  ({r['note']})" for r in result["review"]]
     (folder / "work" / "review.txt").write_text("\n".join(lines) + "\n")

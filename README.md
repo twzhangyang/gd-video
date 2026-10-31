@@ -49,6 +49,10 @@ echo 'export ANTHROPIC_API_KEY="sk-ant-..."' >> ~/.zshrc
 source ~/.zshrc
 ```
 
+## Channel profile
+
+`channel.md` holds the channel's name, voice, hashtags to always include and a YouTube description footer. `gdvideo post` follows it, so fill it in once.
+
 ## Subtitle glossary
 
 `glossary.md` holds game terms, known Whisper mishearings (`wrong → right`), zh translations and the cleanup rules. Bullets under **Levels** and **Game terms** are passed to Whisper as a hint; the rest is used by the cleanup step. Add a line whenever a subtitle comes out wrong, and commit it.
@@ -99,6 +103,14 @@ F=~/Downloads/GD/2026-11-03
 
 Each render takes about 1 minute. Steps 3–5 write separate files, so they can run in any order and never overwrite each other. After editing `subs.json`, rerun only the render steps.
 
+**6. Posting text:** titles, descriptions, tags and hashtags for every platform (about 30 s)
+
+```sh
+.venv/bin/gdvideo post $F
+```
+
+→ `$F/post.md`, with a copy-paste block per platform: YouTube (title, description with chapter timestamps, tags), 抖音 (Chinese title and caption with hashtags), TikTok and Instagram (caption with hashtags). Add `--level "Name"` if the level isn't named in the commentary, or `--notes "first try at all 3 coins"` to steer it. `--force` writes a new one.
+
 ## Usage
 
 Put the two recordings in a dated folder with these names:
@@ -123,6 +135,7 @@ The folder then looks like this. `work/` and `export/` can be deleted at any tim
 2026-11-03/
   ipad.mov, face.mov
   subs.json        cleaned zh/en subtitles (edit by hand if needed)
+  post.md          titles, descriptions and hashtags for each platform
   work/            audio, raw transcript (subs.raw.json), review.txt
   export/          horizontal.mp4, vertical-zh-en.mp4, en.srt, zh.srt, bilingual.srt
 ```
@@ -187,6 +200,8 @@ The code is a standard Python package in `src/gdvideo/`, installed in editable m
 | `transcribe.py` | `prep`: sync + Whisper → raw cues |
 | `sync.py` | Audio offset between the two recordings |
 | `clean.py` | `clean`: Claude API → `subs.json` |
+| `post.py` | `post`: Claude API → `post.md` (titles, descriptions, hashtags) |
+| `claude.py` | Shared Claude API call with structured output and error handling |
 | `subtitles.py` | SRT and ASS writers |
 | `render.py` | `render`: both video layouts |
 | `media.py` | ffmpeg / ffprobe helpers |

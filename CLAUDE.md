@@ -11,7 +11,7 @@ This repo holds the code and the subtitle glossary. The goals, decisions and wor
 | `Video Workflow.md` | Hub: goals, both output formats, per-video steps, topic list |
 | `Recording Setup.md` | Gear, recording routine, sync and audio decisions |
 
-The subtitle glossary is the exception: it lives in this repo as `glossary.md` (game terms, mishearings, zh translations, cleanup rules). `gdvideo` reads the **Levels** and **Game terms** sections at runtime as the Whisper hint; the skill uses the whole file for cleanup. When a correction will recur, add it there.
+`channel.md` (channel profile for `gdvideo post`) also lives in this repo. The subtitle glossary is the other exception: it lives in this repo as `glossary.md` (game terms, mishearings, zh translations, cleanup rules). `gdvideo` reads the **Levels** and **Game terms** sections at runtime as the Whisper hint; the skill uses the whole file for cleanup. When a correction will recur, add it there.
 
 The end-to-end workflow, including the subtitle cleanup rules, is the skill at `.claude/skills/gd-video/SKILL.md` in this repo (linked from `~/.claude/skills/gd-video` so it works from any folder). Keep it in sync when commands, options or outputs change.
 
@@ -19,8 +19,8 @@ Follow the vault's own `CLAUDE.md` when editing notes there (wikilinks, edit in 
 
 ## Code
 
-- Python package in `src/gdvideo/` (module map in `README.md`) with the `gdvideo` command and subcommands `prep` (sync + Whisper → `work/subs.raw.json`), `clean` (Claude API → `<folder>/subs.json` + `work/review.txt`), `render` (`subs.json` → `export/`) and `all` (all three, skipping steps whose output exists). `work/` and `export/` are disposable; the cleaned `subs.json` sits next to the recordings so deleting them never loses subtitle work
-- The pipeline must run from the terminal without Claude Code. `clean` calls the Anthropic API directly (`CLAUDE_MODEL`, structured output via `CLEAN_SCHEMA`, rules in `CLEAN_PROMPT`); it needs `ANTHROPIC_API_KEY`. The cleanup rules live in `CLEAN_PROMPT` and `glossary.md`, not in the skill
+- Python package in `src/gdvideo/` (module map in `README.md`) with the `gdvideo` command and subcommands `prep` (sync + Whisper → `work/subs.raw.json`), `clean` (Claude API → `<folder>/subs.json` + `work/review.txt`), `post` (Claude API → `<folder>/post.md`), `render` (`subs.json` → `export/`) and `all` (all three, skipping steps whose output exists). `work/` and `export/` are disposable; the cleaned `subs.json` sits next to the recordings so deleting them never loses subtitle work
+- The pipeline must run from the terminal without Claude Code. `clean` and `post` call the Anthropic API directly through `claude.ask_json` (`CLAUDE_MODEL`, structured output; rules in `CLEAN_PROMPT` / `POST_PROMPT`); it needs `ANTHROPIC_API_KEY`. The cleanup rules live in `CLEAN_PROMPT` and `glossary.md`, not in the skill
 - Installed editable in the venv: `.venv/bin/pip install -e '.[dev]'`, run as `.venv/bin/gdvideo ...`. Dependencies are pinned in `pyproject.toml`
 - FFmpeg is `ffmpeg-full` (keg-only, has libass) at `/opt/homebrew/opt/ffmpeg-full/bin/`. The regular brew `ffmpeg` has no `subtitles` filter
 - Tunable layout, audio and subtitle constants are at the top of the file. Keep new settings there

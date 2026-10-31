@@ -46,7 +46,10 @@ Input: a folder (e.g. `~/Downloads/GD/2026-11-03`) with the two recordings.
    (then import the SRT there). `--test 20` renders 20 s for a quick check. Takes about 2 minutes.
    Changing layout or audio constants only needs `render` again, not `prep`.
 
-6. **Report** the outputs in `<folder>/export/`:
+6. **Posting text:** `~/Documents/gd-video/.venv/bin/gdvideo post <folder>` writes `<folder>/post.md`
+   (titles, descriptions, tags, hashtags per platform). Pass `--level` / `--notes` if the user gives them.
+
+7. **Report** the outputs in `<folder>/export/` and `<folder>/post.md`:
    - `horizontal.mp4` → YouTube, upload `en.srt` and `zh.srt` as captions
    - `vertical-zh-en.mp4` → 抖音 (Douyin); for TikTok / Instagram Reels render an English-only version with
      `render <folder> --only vertical --subs en` → `vertical-en.mp4`

@@ -13,6 +13,12 @@ GLOSSARY_TERM_SECTIONS = {"Levels", "Game terms"}
 CLAUDE_MODEL = "claude-opus-5-5"
 CLAUDE_EFFORT = "medium"
 
+# Posting text (gdvideo post); channel.md sits at the repo root next to glossary.md
+CHANNEL = Path(os.environ.get("GDVIDEO_CHANNEL", Path(__file__).resolve().parents[2] / "channel.md"))
+YT_MAX_TITLE = 100        # YouTube title limit (characters)
+YT_MAX_TAG_CHARS = 500    # YouTube limit for all tags together
+IG_MAX_HASHTAGS = 30      # Instagram limit per post
+
 # Layout
 PIP_WIDTH = 0.22          # horizontal: facecam width as a fraction of the canvas width
 PIP_MARGIN = 32           # px from the right edge
