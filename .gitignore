@@ -2,5 +2,9 @@
 .idea/
 __pycache__/
 *.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
 .DS_Store
 .claude/settings.local.json
