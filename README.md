@@ -128,6 +128,14 @@ Each render takes about 1 minute. Steps 3–5 write separate files, so they can 
 
 → `export/cover-horizontal.jpg` for YouTube (a frame of `horizontal.mp4`, so render it first) and `export/cover-vertical.jpg` for 抖音, TikTok and Instagram (the vertical layout without subtitles; logo and title stay inside the 3:4 area those apps show in profile grids). `--only horizontal` or `--only vertical` makes just one. The title defaults to the level name from step 6; use `--text "Electroman Adventures"` to set it yourself, and `--at 1:05` to pick the frame (default: 30% into the video). Rerun with a different `--at` until you like the frame.
 
+**8. Pack for upload:** one folder per platform with everything that platform needs (instant)
+
+```sh
+.venv/bin/gdvideo pack $F --open
+```
+
+→ `export/pack/youtube/`, `douyin/`, `tiktok/`, `instagram/`, each with `video.mp4`, `cover.jpg` and the text from `post.md` as `title.txt` / `description.txt` / `tags.txt` / `caption.txt` (YouTube also gets `captions-en.srt` and `captions-zh.srt`). Drag the files into each upload page or your scheduler. Videos are hard links, so the pack takes no extra disk space. It reads `post.md`, so edit that file (not the `.txt` files) and run `pack` again; the pack folder is rebuilt every time. Missing files are listed with the command that makes them. `--open` opens the folder in Finder.
+
 ## Usage
 
 Put the two recordings in a dated folder with these names:
@@ -144,7 +152,7 @@ Then run everything with one command:
 .venv/bin/gdvideo all ~/Downloads/GD/2026-11-03
 ```
 
-It runs the three steps below, skipping any step whose output already exists, so running it again after changing a setting only re-renders. `--force` redoes prep and clean from scratch. At the end of the clean step it prints the subtitle lines Claude was unsure about; fix them in `subs.json` and run `render` again.
+It runs prep, clean and post (each skipped if its output already exists), renders `horizontal.mp4`, `vertical-zh-en.mp4` and `vertical-en.mp4`, makes the covers (skipped if they exist, so a frame you picked with `cover --at` is kept) and builds `export/pack/`. Running it again after changing a setting only re-renders and re-packs. `--force` redoes prep, clean, post and covers from scratch; `--subs en` (repeatable) renders only the vertical variants you name; `--test 20` renders clips and skips cover and pack. About 3 minutes. At the end of the clean step it prints the subtitle lines Claude was unsure about; fix them in `subs.json` and run `render` again.
 
 The folder then looks like this. `work/` and `export/` can be deleted at any time; `subs.json` holds the cleaned subtitles, so keep it unless you want a fresh cleanup.
 
@@ -155,6 +163,7 @@ The folder then looks like this. `work/` and `export/` can be deleted at any tim
   post.md          titles, descriptions and hashtags for each platform
   work/            audio, raw transcript (subs.raw.json), review.txt
   export/          horizontal.mp4, vertical-zh-en.mp4, cover-horizontal.jpg, cover-vertical.jpg, *.srt
+    pack/          one upload folder per platform (gdvideo pack)
 ```
 
 ### Step 1: `prep` (sync and transcribe)
@@ -212,7 +221,7 @@ The code is a standard Python package in `src/gdvideo/`, installed in editable m
 
 | Module | What it does |
 |---|---|
-| `cli.py` | Command line (`gdvideo all/prep/clean/render`) |
+| `cli.py` | Command line (`gdvideo all/prep/clean/post/render/cover/pack`) |
 | `config.py` | All tunable settings and paths |
 | `transcribe.py` | `prep`: sync + Whisper → raw cues |
 | `sync.py` | Audio offset between the two recordings |
@@ -220,8 +229,9 @@ The code is a standard Python package in `src/gdvideo/`, installed in editable m
 | `post.py` | `post`: Claude API → `post.md` (titles, descriptions, hashtags) |
 | `claude.py` | Shared Claude API call with structured output and error handling |
 | `cover.py` | `cover`: horizontal and vertical covers with logo, emoji and title (Pillow) |
+| `pack.py` | `pack`: per-platform upload folders from `export/` and `post.md` |
 | `subtitles.py` | SRT and ASS writers |
 | `render.py` | `render`: both video layouts |
 | `media.py` | ffmpeg / ffprobe helpers |
 
-Run the tests with `.venv/bin/pytest`. They cover the pure functions (subtitle files, cue splitting, glossary parsing, sync, cue tidying, posting text, covers) and need neither ffmpeg nor an API key.
+Run the tests with `.venv/bin/pytest`. They cover the pure functions (subtitle files, cue splitting, glossary parsing, sync, cue tidying, posting text, covers, packing) and need neither ffmpeg nor an API key.
