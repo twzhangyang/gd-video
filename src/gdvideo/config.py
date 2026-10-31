@@ -19,6 +19,24 @@ YT_MAX_TITLE = 100        # YouTube title limit (characters)
 YT_MAX_TAG_CHARS = 500    # YouTube limit for all tags together
 IG_MAX_HASHTAGS = 30      # Instagram limit per post
 
+# Cover (gdvideo cover)
+ASSETS = Path(__file__).resolve().parents[2] / "assets"
+COVER_LOGO = ASSETS / "logo.png"                         # "GEOMETRY DASH" logo from Canva, transparent PNG
+COVER_FONT = ASSETS / "fonts" / "PermanentMarker-Regular.ttf"
+EMOJI_FONT = "/System/Library/Fonts/Apple Color Emoji.ttc"
+COVER_EMOJI = "🔥"
+COVER_AT = 0.3            # take the frame at this fraction of the video (override with --at)
+COVER_MAX_WIDTH = 1920    # output width; YouTube thumbnails must be under 2 MB
+# Positions and sizes as fractions of the cover width (x, widths) or height (y, title size).
+# title_bottom keeps the title above the platform UI / the 3:4 crop 抖音 and TikTok use in profile grids.
+COVER_LAYOUT = {
+    "horizontal": {"logo_x": 0.03, "logo_y": 0.22, "logo_w": 0.62,
+                   "title_x": 0.06, "title_y": 0.68, "title_w": 0.8, "title_size": 0.09, "title_bottom": 0.96},
+    "vertical": {"logo_x": 0.05, "logo_y": 0.40, "logo_w": 0.85,
+                 "title_x": 0.05, "title_y": 0.72, "title_w": 0.85, "title_size": 0.06, "title_bottom": 0.87},
+}
+COVER_TILT = 4            # degrees the logo and title are tilted (counter-clockwise)
+
 # Layout
 PIP_WIDTH = 0.22          # horizontal: facecam width as a fraction of the canvas width
 PIP_MARGIN = 32           # px from the right edge

@@ -49,7 +49,10 @@ Input: a folder (e.g. `~/Downloads/GD/2026-11-03`) with the two recordings.
 6. **Posting text:** `~/Documents/gd-video/.venv/bin/gdvideo post <folder>` writes `<folder>/post.md`
    (titles, descriptions, tags, hashtags per platform). Pass `--level` / `--notes` if the user gives them.
 
-7. **Report** the outputs in `<folder>/export/` and `<folder>/post.md`:
+7. **Cover:** `~/Documents/gd-video/.venv/bin/gdvideo cover <folder>` (after the horizontal render) writes
+   `<folder>/export/cover-horizontal.jpg` (YouTube) and `cover-vertical.jpg` (抖音/TikTok/Instagram); `--only` makes one. `--text` sets the title, `--at 1:05` picks the frame. Show it to the user.
+
+8. **Report** the outputs in `<folder>/export/` and `<folder>/post.md`:
    - `horizontal.mp4` → YouTube, upload `en.srt` and `zh.srt` as captions
    - `vertical-zh-en.mp4` → 抖音 (Douyin); for TikTok / Instagram Reels render an English-only version with
      `render <folder> --only vertical --subs en` → `vertical-en.mp4`

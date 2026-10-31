@@ -49,6 +49,15 @@ echo 'export ANTHROPIC_API_KEY="sk-ant-..."' >> ~/.zshrc
 source ~/.zshrc
 ```
 
+## Cover assets
+
+`gdvideo cover` uses files in `assets/`:
+
+- `assets/logo.png`: the "GEOMETRY DASH" logo, made in Canva and downloaded as a PNG with a transparent background. Without it the cover is made without a logo
+- `assets/fonts/PermanentMarker-Regular.ttf`: the brush font for the title (Google Fonts, Apache License 2.0)
+
+The 🔥 comes from macOS's Apple Color Emoji. Positions and sizes per format are in `COVER_LAYOUT` in `config.py`; the emoji and tilt are `COVER_EMOJI` and `COVER_TILT`.
+
 ## Channel profile
 
 `channel.md` holds the channel's name, voice, hashtags to always include and a YouTube description footer. `gdvideo post` follows it, so fill it in once.
@@ -111,6 +120,14 @@ Each render takes about 1 minute. Steps 3–5 write separate files, so they can 
 
 → `$F/post.md`, with a copy-paste block per platform: YouTube (title, description with chapter timestamps, tags), 抖音 (Chinese title and caption with hashtags), TikTok and Instagram (caption with hashtags). Add `--level "Name"` if the level isn't named in the commentary, or `--notes "first try at all 3 coins"` to steer it. `--force` writes a new one.
 
+**7. Covers:** a cover for each format, with the logo, 🔥 and the title (a few seconds)
+
+```sh
+.venv/bin/gdvideo cover $F
+```
+
+→ `export/cover-horizontal.jpg` for YouTube (a frame of `horizontal.mp4`, so render it first) and `export/cover-vertical.jpg` for 抖音, TikTok and Instagram (the vertical layout without subtitles; logo and title stay inside the 3:4 area those apps show in profile grids). `--only horizontal` or `--only vertical` makes just one. The title defaults to the level name from step 6; use `--text "Electroman Adventures"` to set it yourself, and `--at 1:05` to pick the frame (default: 30% into the video). Rerun with a different `--at` until you like the frame.
+
 ## Usage
 
 Put the two recordings in a dated folder with these names:
@@ -137,7 +154,7 @@ The folder then looks like this. `work/` and `export/` can be deleted at any tim
   subs.json        cleaned zh/en subtitles (edit by hand if needed)
   post.md          titles, descriptions and hashtags for each platform
   work/            audio, raw transcript (subs.raw.json), review.txt
-  export/          horizontal.mp4, vertical-zh-en.mp4, en.srt, zh.srt, bilingual.srt
+  export/          horizontal.mp4, vertical-zh-en.mp4, cover-horizontal.jpg, cover-vertical.jpg, *.srt
 ```
 
 ### Step 1: `prep` (sync and transcribe)
@@ -202,8 +219,9 @@ The code is a standard Python package in `src/gdvideo/`, installed in editable m
 | `clean.py` | `clean`: Claude API → `subs.json` |
 | `post.py` | `post`: Claude API → `post.md` (titles, descriptions, hashtags) |
 | `claude.py` | Shared Claude API call with structured output and error handling |
+| `cover.py` | `cover`: horizontal and vertical covers with logo, emoji and title (Pillow) |
 | `subtitles.py` | SRT and ASS writers |
 | `render.py` | `render`: both video layouts |
 | `media.py` | ffmpeg / ffprobe helpers |
 
-Run the tests with `.venv/bin/pytest`. They cover the pure functions (subtitle files, cue splitting, glossary parsing, sync, cue tidying) and need neither ffmpeg nor an API key.
+Run the tests with `.venv/bin/pytest`. They cover the pure functions (subtitle files, cue splitting, glossary parsing, sync, cue tidying, posting text, covers) and need neither ffmpeg nor an API key.

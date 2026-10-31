@@ -8,6 +8,11 @@ from gdvideo.media import detect_side_bars, encode_args, probe, run
 from gdvideo.subtitles import is_cleaned, write_ass, write_srt
 
 
+def vertical_sizes(game_w, game_h, face_w, face_h):
+    """Heights of the facecam (top) and the game (below it) in the 1080-wide vertical layout."""
+    return round(V_W * face_h / face_w / 2) * 2, round(V_W * game_h / game_w / 2) * 2
+
+
 def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
     work, out = folder / "work", folder / "export"
     work.mkdir(exist_ok=True)
@@ -54,8 +59,7 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
             cwd=work)
 
     if only in (None, "vertical"):
-        face_h = round(V_W * fh / fw / 2) * 2
-        game_h = round(V_W * gh / gw / 2) * 2
+        face_h, game_h = vertical_sizes(gw, gh, fw, fh)
         write_ass(cues, work / "v.ass", subs.split(","), face_h + game_h + SUB_GAP)
         vf = (f"color=c={V_BG}:s={V_W}x{V_H}:r=60:d={dur}[bg];"
               f"{face_v},scale={V_W}:{face_h}[f];{game_v},scale={V_W}:{game_h}[g];"

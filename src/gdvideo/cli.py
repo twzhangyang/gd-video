@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from gdvideo.clean import clean
+from gdvideo.cover import cover
 from gdvideo.post import post
 from gdvideo.render import render
 from gdvideo.transcribe import prep
@@ -21,6 +22,7 @@ Commands:
     clean  <folder>   Claude cleans + translates the raw cues -> <folder>/subs.json
     post   <folder>   Claude writes titles, descriptions and hashtags -> <folder>/post.md
     render <folder>   subs.json -> <folder>/export/{horizontal,vertical-<langs>}.mp4 + .srt files
+    cover  <folder>   thumbnails with logo + title -> <folder>/export/cover-{horizontal,vertical}.jpg
 
 work/ and export/ are disposable; subs.json and post.md live next to the recordings.
 clean and post need Anthropic API credentials (ANTHROPIC_API_KEY).
@@ -82,6 +84,11 @@ def main():
     po.add_argument("folder")
     po.add_argument("--force", action="store_true", help="replace an existing post.md")
     add_post_args(po)
+    pv = sub.add_parser("cover", help="make cover images for the horizontal and vertical videos")
+    pv.add_argument("folder")
+    pv.add_argument("--text", help="cover title (default: the level name from gdvideo post)")
+    pv.add_argument("--at", help="time of the frame to use, e.g. 1:05 (default: 30%% into the video)")
+    pv.add_argument("--only", choices=["horizontal", "vertical"], help="make only one of the two covers")
     pr = sub.add_parser("render", help="render both videos")
     pr.add_argument("folder")
     add_render_args(pr)
@@ -94,5 +101,6 @@ def main():
         "clean": lambda: clean(folder, args.force),
         "post": lambda: post(folder, args.level, args.notes, args.force),
         "render": lambda: run_render(folder, args),
+        "cover": lambda: cover(folder, args.text, args.at, [args.only] if args.only else ["horizontal", "vertical"]),
     }
     commands[args.cmd]()
