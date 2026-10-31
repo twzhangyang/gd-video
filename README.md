@@ -3,7 +3,7 @@
 Turns one Geometry Dash recording session into two videos:
 
 - `horizontal.mp4`: the game at its native ratio with the facecam in a small top-right window, for YouTube
-- `vertical.mp4`: 1080×1920, facecam on top, game in the middle, burned-in Chinese/English subtitles, for TikTok, Douyin, Instagram Reels and YouTube Shorts
+- `vertical-<langs>.mp4`: 1080×1920, facecam on top, game in the middle, burned-in subtitles, for 抖音, TikTok, Instagram Reels and YouTube Shorts. `<langs>` is the burned-in languages, e.g. `vertical-zh-en.mp4` (Chinese + English) or `vertical-en.mp4` (English only)
 
 It syncs the two recordings automatically, transcribes the voice locally with Whisper, has Claude clean and translate the subtitles, and renders with FFmpeg.
 
@@ -53,6 +53,52 @@ source ~/.zshrc
 
 `glossary.md` holds game terms, known Whisper mishearings (`wrong → right`), zh translations and the cleanup rules. Bullets under **Levels** and **Game terms** are passed to Whisper as a hint; the rest is used by the cleanup step. Add a line whenever a subtitle comes out wrong, and commit it.
 
+## Common usage
+
+Each week: put `ipad.mov` and `face.mov` in a new dated folder, then run these from the repo root. Set the folder once:
+
+```sh
+F=~/Downloads/GD/2026-11-03
+```
+
+**1. Prep:** sync the recordings and transcribe the voice (about 30 s)
+
+```sh
+.venv/bin/gdvideo prep $F
+```
+
+**2. Clean:** Claude removes filler, fixes mishearings and adds Chinese (about 1 min). Check the lines it prints as unsure, and fix them in `$F/subs.json` if needed.
+
+```sh
+.venv/bin/gdvideo clean $F
+```
+
+**3. YouTube:** horizontal video without burned-in subtitles. Upload `export/en.srt` and `export/zh.srt` as captions on YouTube instead.
+
+```sh
+.venv/bin/gdvideo render $F --only horizontal
+```
+
+→ `export/horizontal.mp4`
+
+**4. 抖音:** vertical video with Chinese and English burned in
+
+```sh
+.venv/bin/gdvideo render $F --only vertical --subs zh,en
+```
+
+→ `export/vertical-zh-en.mp4`
+
+**5. TikTok and Instagram:** vertical video with English only burned in
+
+```sh
+.venv/bin/gdvideo render $F --only vertical --subs en
+```
+
+→ `export/vertical-en.mp4`
+
+Each render takes about 1 minute. Steps 3–5 write separate files, so they can run in any order and never overwrite each other. After editing `subs.json`, rerun only the render steps.
+
 ## Usage
 
 Put the two recordings in a dated folder with these names:
@@ -78,7 +124,7 @@ The folder then looks like this. `work/` and `export/` can be deleted at any tim
   ipad.mov, face.mov
   subs.json        cleaned zh/en subtitles (edit by hand if needed)
   work/            audio, raw transcript (subs.raw.json), review.txt
-  export/          horizontal.mp4, vertical.mp4, en.srt, zh.srt, bilingual.srt
+  export/          horizontal.mp4, vertical-zh-en.mp4, en.srt, zh.srt, bilingual.srt
 ```
 
 ### Step 1: `prep` (sync and transcribe)
@@ -105,10 +151,10 @@ Sends the raw cues and `glossary.md` to Claude (`claude-opus-5-5` through the An
 
 | Option | Effect |
 |---|---|
-| `--subs zh,en` (default) / `en` / `zh` / `none` | Languages burned into the vertical video. `none` gives a clean video for editing in 剪映 |
+| `--subs zh,en` (default) / `en` / `zh` / `none` | Languages burned into the vertical video, which is saved as `vertical-<langs>.mp4` (e.g. `vertical-en.mp4`), so each version gets its own file. `none` gives a clean video for editing in 剪映 |
 | `--only horizontal` / `--only vertical` | Render one format |
 | `--burn-horizontal` | Also burn subtitles into the horizontal video |
-| `--test 20` | Render only the first 20 s to `horizontal-test.mp4` / `vertical-test.mp4` for a quick check; the full videos are left alone |
+| `--test 20` | Render only the first 20 s to `horizontal-test.mp4` / `vertical-<langs>-test.mp4` for a quick check; the full videos are left alone |
 
 These options also work with `all`. Rendering both formats takes about 2 minutes for a 3-minute video on an M4 Pro.
 

@@ -38,7 +38,7 @@ There are no unit tests. To check a change, render a short clip of a real sessio
 
 ```sh
 .venv/bin/gdvideo render <folder> --test 20
-ffmpeg -ss 10 -i <folder>/export/vertical.mp4 -frames:v 1 /tmp/check.jpg
+ffmpeg -ss 10 -i <folder>/export/vertical-zh-en-test.mp4 -frames:v 1 /tmp/check.jpg
 ```
 
 Sample session: `~/Downloads/GD/2026-11-03`.

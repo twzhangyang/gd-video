@@ -48,7 +48,8 @@ Input: a folder (e.g. `~/Downloads/GD/2026-11-03`) with the two recordings.
 
 6. **Report** the outputs in `<folder>/export/`:
    - `horizontal.mp4` → YouTube, upload `en.srt` and `zh.srt` as captions
-   - `vertical.mp4` → TikTok, Douyin, Instagram Reels, YouTube Shorts
+   - `vertical-zh-en.mp4` → 抖音 (Douyin); for TikTok / Instagram Reels render an English-only version with
+     `render <folder> --only vertical --subs en` → `vertical-en.mp4`
    - `bilingual.srt` → for 剪映 if they want to edit further
 
 ## Tuning

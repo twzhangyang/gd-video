@@ -51,7 +51,7 @@ def main():
         sp.add_argument("--lang", help="force speech language, e.g. en or zh (default: auto)")
 
     def add_render_args(sp):
-        sp.add_argument("--subs", default="zh,en", help="burned-in subtitle languages for vertical: zh,en | en | zh | none")
+        sp.add_argument("--subs", default="zh,en", help="burned-in subtitle languages for vertical: zh,en | en | zh | none; output is vertical-<langs>.mp4, e.g. vertical-zh-en.mp4")
         sp.add_argument("--only", choices=["horizontal", "vertical"])
         sp.add_argument("--burn-horizontal", action="store_true", help="also burn subtitles into the horizontal video")
         sp.add_argument("--test", type=float, help="render only the first N seconds to *-test.mp4 (quick check)")

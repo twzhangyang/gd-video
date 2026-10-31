@@ -1,4 +1,4 @@
-"""render: subs.json + recordings -> horizontal.mp4, vertical.mp4 and SRT files."""
+"""render: subs.json + recordings -> horizontal.mp4, vertical-<langs>.mp4 and SRT files."""
 import json
 import sys
 
@@ -62,7 +62,7 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
               f"[bg][f]overlay=0:0:eof_action=repeat[b1];[b1][g]overlay=0:{face_h}:eof_action=repeat,"
               f"subtitles=v.ass[v]")
         run([FFMPEG, "-v", "warning", "-stats", "-y", *inputs, "-filter_complex", f"{vf};{audio}",
-             "-map", "[v]", "-map", "[a]", "-t", str(dur), *encode_args("12M"), str(out / f"vertical{suffix}.mp4")],
+             "-map", "[v]", "-map", "[a]", "-t", str(dur), *encode_args("12M"), str(out / f"vertical-{subs.replace(',', '-')}{suffix}.mp4")],
             cwd=work)
 
     print(f"Done: {out}", file=sys.stderr)
