@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from gdvideo.config import (COVER_AT, COVER_EMOJI, COVER_FONT, COVER_LAYOUT, COVER_LOGO, COVER_MAX_WIDTH, COVER_TILT,
                             EMOJI_FONT, FFMPEG, V_BG, V_H, V_W)
-from gdvideo.media import detect_side_bars, probe, run
+from gdvideo.media import detect_side_bars, probe, recording, run
 from gdvideo.render import vertical_sizes
 
 
@@ -129,15 +129,16 @@ def vertical_frame(folder, at, path):
     if not subs.exists():
         sys.exit(f"{subs} not found. Run prep and clean first (the cover needs the sync offset).")
     offset = json.loads(subs.read_text())["offset"]
-    gw, gh, dur = probe(folder / "ipad.mov")
-    fw, fh, _ = probe(folder / "face.mov")
-    gw, gx = detect_side_bars(folder / "ipad.mov", dur)
+    game, face = recording(folder, "ipad"), recording(folder, "face")
+    gw, gh, dur = probe(game)
+    fw, fh, _ = probe(face)
+    gw, gx = detect_side_bars(game, dur)
     face_h, game_h = vertical_sizes(gw, gh, fw, fh)
     t = frame_time(at, dur)
     vf = (f"[1:v]scale={V_W}:{face_h}[f];[0:v]crop={gw}:{gh}:{gx}:0,scale={V_W}:{game_h}[g];"
           f"[f][g]vstack,pad={V_W}:{V_H}:0:0:{V_BG}")
-    run([FFMPEG, "-v", "error", "-y", "-ss", str(t), "-i", str(folder / "ipad.mov"),
-         "-ss", str(max(t + offset, 0)), "-i", str(folder / "face.mov"),
+    run([FFMPEG, "-v", "error", "-y", "-ss", str(t), "-i", str(game),
+         "-ss", str(max(t + offset, 0)), "-i", str(face),
          "-filter_complex", vf, "-frames:v", "1", str(path)])
     return t
 

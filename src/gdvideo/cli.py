@@ -16,7 +16,7 @@ ALL_SUBS = ["zh,en", "en"]  # `all` renders these verticals: 抖音 (zh,en), Tik
 DESCRIPTION = """Geometry Dash video pipeline: sync iPad gameplay + facecam, transcribe, render two layouts.
 
 Folder layout (one folder per video):
-    <folder>/ipad.mov   gameplay (game audio only)
+    <folder>/ipad.mov   gameplay (game audio only)   .mov, .mp4 or .m4v, any letter case (ipad.MP4)
     <folder>/face.mov   facecam (voice only)
 
 Commands:

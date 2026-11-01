@@ -4,7 +4,7 @@ import re
 import sys
 
 from gdvideo.config import GLOSSARY, GLOSSARY_TERM_SECTIONS, MAX_CHARS, MAX_DURATION, PAUSE_SPLIT, WHISPER_MODEL
-from gdvideo.media import extract_wav
+from gdvideo.media import extract_wav, recording
 from gdvideo.sync import find_offset
 
 
@@ -51,8 +51,8 @@ def prep(folder, offset=None, lang=None):
     work = folder / "work"
     work.mkdir(exist_ok=True)
     print("Extracting audio...", file=sys.stderr)
-    game = extract_wav(folder / "ipad.mov", work / "ipad.wav")
-    voice = extract_wav(folder / "face.mov", work / "face.wav")
+    game = extract_wav(recording(folder, "ipad"), work / "ipad.wav")
+    voice = extract_wav(recording(folder, "face"), work / "face.wav")
 
     if offset is not None:
         print(f"Using manual offset {offset:+.3f}s", file=sys.stderr)
@@ -62,7 +62,7 @@ def prep(folder, offset=None, lang=None):
         print(f"Offset {offset:+.3f}s ({agree}/{total} windows agree)", file=sys.stderr)
         if agree < max(2, total / 2):
             sys.exit("Sync is unreliable. Find the offset by hand and rerun with --offset SECONDS "
-                     "(seconds into face.mov that match ipad.mov t=0).")
+                     "(seconds into the face recording that match the ipad one's t=0).")
 
     print("Transcribing...", file=sys.stderr)
     import mlx_whisper

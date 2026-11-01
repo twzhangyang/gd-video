@@ -9,6 +9,18 @@ from scipy.io import wavfile
 
 from gdvideo.config import FFMPEG, FFPROBE, SR
 
+VIDEO_EXTENSIONS = {".mov", ".mp4", ".m4v"}
+
+
+def recording(folder, name):
+    """The recording called <name> in the folder, whatever its extension and letter case (ipad.mov, ipad.MP4)."""
+    found = sorted(p for p in folder.iterdir() if p.stem.lower() == name and p.suffix.lower() in VIDEO_EXTENSIONS)
+    if not found:
+        sys.exit(f"No {name} recording in {folder}: expected {name}.mov or {name}.mp4")
+    if len(found) > 1:
+        sys.exit(f"More than one {name} recording in {folder}: {', '.join(p.name for p in found)}. Keep one.")
+    return found[0]
+
 
 def run(cmd, **kw):
     print("+", " ".join(str(c) for c in cmd[:6]), "...", file=sys.stderr)

@@ -146,6 +146,8 @@ Put the two recordings in a dated folder with these names:
   face.mov   MacBook facecam (voice only)
 ```
 
+The extension can be `.mov`, `.mp4` or `.m4v` in any letter case (`ipad.MP4` works too); keep only one file per name.
+
 Then run everything with one command:
 
 ```sh

@@ -4,7 +4,7 @@ import sys
 
 from gdvideo.config import (FFMPEG, GAME_VOLUME, LOUDNESS, PIP_BORDER, PIP_MARGIN, PIP_TOP, PIP_WIDTH, SUB_FONT,
                             SUB_GAP, V_BG, V_H, V_W, VOICE_VOLUME)
-from gdvideo.media import detect_side_bars, encode_args, probe, run
+from gdvideo.media import detect_side_bars, encode_args, probe, recording, run
 from gdvideo.subtitles import is_cleaned, write_ass, write_srt
 
 
@@ -22,9 +22,10 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
     if not is_cleaned(data):
         sys.exit(f"{folder / 'subs.json'} has no en/zh text. Run: gdvideo clean <folder> --force")
 
-    gw, gh, dur = probe(folder / "ipad.mov")
-    fw, fh, _ = probe(folder / "face.mov")
-    gw, gx = detect_side_bars(folder / "ipad.mov", dur)
+    game, face = recording(folder, "ipad"), recording(folder, "face")
+    gw, gh, dur = probe(game)
+    fw, fh, _ = probe(face)
+    gw, gx = detect_side_bars(game, dur)
     game_v = f"[0:v]crop={gw}:{gh}:{gx}:0,fps=60"
     suffix = ""
     if test:
@@ -44,7 +45,7 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
         face_a = f"[1:a]adelay={int(-offset * 1000)}:all=1"
     audio = (f"[0:a]volume={GAME_VOLUME}[ga];{face_a},volume={VOICE_VOLUME}[va];"
              f"[ga][va]amix=inputs=2:duration=first:normalize=0,loudnorm=I={LOUDNESS}:TP=-1.5:LRA=11[a]")
-    inputs = ["-i", str(folder / "ipad.mov"), "-i", str(folder / "face.mov")]
+    inputs = ["-i", str(game), "-i", str(face)]
 
     if only in (None, "horizontal"):
         pw = int(gw * PIP_WIDTH) // 2 * 2
