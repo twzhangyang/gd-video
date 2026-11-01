@@ -152,6 +152,7 @@ Then run everything with one command:
 
 ```sh
 .venv/bin/gdvideo all ~/Downloads/GD/2026-11-03
+.venv/bin/gdvideo all ~/Downloads/GD/2026-11-03 --test 30
 ```
 
 It runs prep, clean and post (each skipped if its output already exists), renders `horizontal.mp4`, `vertical-zh-en.mp4` and `vertical-en.mp4`, makes the covers (skipped if they exist, so a frame you picked with `cover --at` is kept) and builds `export/pack/`. Running it again after changing a setting only re-renders and re-packs. `--force` redoes prep, clean, post and covers from scratch; `--subs en` (repeatable) renders only the vertical variants you name; `--test 20` renders clips and skips cover and pack. About 3 minutes. At the end of the clean step it prints the subtitle lines Claude was unsure about; fix them in `subs.json` and run `render` again.
