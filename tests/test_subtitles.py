@@ -48,3 +48,10 @@ def test_write_ass_none_has_no_events(tmp_path):
     path = tmp_path / "v.ass"
     write_ass(CUES, path, ["none"], top=1510)
     assert "Dialogue:" not in path.read_text()
+
+
+def test_starts_reads_new_and_old_subs_json():
+    from gdvideo.subtitles import starts
+    assert starts({"ipad_start": 11.0, "face_start": 0.0}) == (11.0, 0.0)
+    assert starts({"offset": 1.093}) == (0, 1.093)                 # older files: auto-sync offset
+    assert starts({"offset": -10.9, "start": 10.9}) == (10.9, 0.0)

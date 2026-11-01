@@ -8,6 +8,7 @@ from gdvideo.config import (COVER_AT, COVER_EMOJI, COVER_FONT, COVER_LAYOUT, COV
                             EMOJI_FONT, FFMPEG, V_BG, V_H, V_W)
 from gdvideo.media import detect_side_bars, probe, recording, run
 from gdvideo.render import vertical_sizes
+from gdvideo.subtitles import starts
 
 
 def parse_time(s):
@@ -127,18 +128,18 @@ def vertical_frame(folder, at, path):
     """The vertical layout (facecam on top, game below) built from the recordings, without subtitles."""
     subs = folder / "subs.json"
     if not subs.exists():
-        sys.exit(f"{subs} not found. Run prep and clean first (the cover needs the sync offset).")
-    offset = json.loads(subs.read_text())["offset"]
+        sys.exit(f"{subs} not found. Run prep and clean first (the cover needs the start times).")
+    ipad_start, face_start = starts(json.loads(subs.read_text()))
     game, face = recording(folder, "ipad"), recording(folder, "face")
     gw, gh, dur = probe(game)
     fw, fh, _ = probe(face)
     gw, gx = detect_side_bars(game, dur)
     face_h, game_h = vertical_sizes(gw, gh, fw, fh)
-    t = frame_time(at, dur)
+    t = frame_time(at, dur - ipad_start)
     vf = (f"[1:v]scale={V_W}:{face_h}[f];[0:v]crop={gw}:{gh}:{gx}:0,scale={V_W}:{game_h}[g];"
           f"[f][g]vstack,pad={V_W}:{V_H}:0:0:{V_BG}")
-    run([FFMPEG, "-v", "error", "-y", "-ss", str(t), "-i", str(game),
-         "-ss", str(max(t + offset, 0)), "-i", str(face),
+    run([FFMPEG, "-v", "error", "-y", "-ss", str(t + ipad_start), "-i", str(game),
+         "-ss", str(max(t + face_start, 0)), "-i", str(face),
          "-filter_complex", vf, "-frames:v", "1", str(path)])
     return t
 

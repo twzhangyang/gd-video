@@ -21,7 +21,7 @@ Folder layout (one folder per video):
 
 Commands:
     all    <folder>   prep + clean + post + render + cover + pack, skipping prep/clean/post/cover if done
-    prep   <folder>   sync + transcribe -> <folder>/work/subs.raw.json
+    prep   <folder>   transcribe (recordings start together unless --ipad-start/--face-start/--auto-sync) -> work/subs.raw.json
     clean  <folder>   Claude cleans + translates the raw cues -> <folder>/subs.json
     post   <folder>   Claude writes titles, descriptions and hashtags -> <folder>/post.md
     render <folder>   subs.json -> <folder>/export/{horizontal,vertical-<langs>}.mp4 + .srt files
@@ -37,7 +37,7 @@ def run_all(folder, args):
     if (folder / "work" / "subs.raw.json").exists() and not args.force:
         print("Skipping prep: work/subs.raw.json exists", file=sys.stderr)
     else:
-        prep(folder, args.offset, args.lang)
+        prep(folder, args.ipad_start, args.face_start, args.auto_sync, args.lang)
     if (folder / "subs.json").exists() and not args.force:
         print("Skipping clean: subs.json exists", file=sys.stderr)
     else:
@@ -77,7 +77,12 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
 
     def add_prep_args(sp):
-        sp.add_argument("--offset", type=float, help="manual sync: seconds into face.mov matching ipad.mov t=0")
+        sp.add_argument("--ipad-start", type=float, default=0.0, help="seconds into the ipad recording where the "
+                        "video begins, e.g. 11 to cut a static screen (default: 0)")
+        sp.add_argument("--face-start", type=float, default=0.0, help="seconds into the face recording that match "
+                        "the video start (default: 0, both recordings started together)")
+        sp.add_argument("--auto-sync", action="store_true", help="measure --face-start from the audio "
+                        "(the facecam mic hears the game) instead")
         sp.add_argument("--lang", help="force speech language, e.g. en or zh (default: auto)")
 
     def add_render_args(sp, many=False):
@@ -126,7 +131,7 @@ def main():
 
     commands = {
         "all": lambda: run_all(folder, args),
-        "prep": lambda: prep(folder, args.offset, args.lang),
+        "prep": lambda: prep(folder, args.ipad_start, args.face_start, args.auto_sync, args.lang),
         "clean": lambda: clean(folder, args.force),
         "post": lambda: post(folder, args.level, args.notes, args.force),
         "render": lambda: run_render(folder, args),

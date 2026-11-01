@@ -5,7 +5,7 @@ import sys
 from gdvideo.config import (FFMPEG, GAME_VOLUME, LOUDNESS, PIP_BORDER, PIP_MARGIN, PIP_TOP, PIP_WIDTH, SUB_FONT,
                             SUB_GAP, V_BG, V_H, V_W, VOICE_VOLUME)
 from gdvideo.media import detect_side_bars, encode_args, probe, recording, run
-from gdvideo.subtitles import is_cleaned, write_ass, write_srt
+from gdvideo.subtitles import is_cleaned, starts, write_ass, write_srt
 
 
 def vertical_sizes(game_w, game_h, face_w, face_h):
@@ -18,7 +18,8 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
     work.mkdir(exist_ok=True)
     out.mkdir(exist_ok=True)
     data = json.loads((folder / "subs.json").read_text())
-    cues, offset = data["cues"], data["offset"]
+    cues = data["cues"]
+    ipad_start, face_start = starts(data)
     if not is_cleaned(data):
         sys.exit(f"{folder / 'subs.json'} has no en/zh text. Run: gdvideo clean <folder> --force")
 
@@ -26,6 +27,7 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
     gw, gh, dur = probe(game)
     fw, fh, _ = probe(face)
     gw, gx = detect_side_bars(game, dur)
+    dur -= ipad_start
     game_v = f"[0:v]crop={gw}:{gh}:{gx}:0,fps=60"
     suffix = ""
     if test:
@@ -37,15 +39,15 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
     write_srt(cues, out / "bilingual.srt", ["zh", "en"])
 
     # Facecam aligned to the ipad timeline
-    if offset >= 0:
-        face_v = f"[1:v]trim=start={offset},setpts=PTS-STARTPTS,fps=60"
-        face_a = f"[1:a]atrim=start={offset},asetpts=PTS-STARTPTS"
+    if face_start >= 0:
+        face_v = f"[1:v]trim=start={face_start},setpts=PTS-STARTPTS,fps=60"
+        face_a = f"[1:a]atrim=start={face_start},asetpts=PTS-STARTPTS"
     else:
-        face_v = f"[1:v]tpad=start_duration={-offset}:start_mode=clone,fps=60"
-        face_a = f"[1:a]adelay={int(-offset * 1000)}:all=1"
+        face_v = f"[1:v]tpad=start_duration={-face_start}:start_mode=clone,fps=60"
+        face_a = f"[1:a]adelay={int(-face_start * 1000)}:all=1"
     audio = (f"[0:a]volume={GAME_VOLUME}[ga];{face_a},volume={VOICE_VOLUME}[va];"
              f"[ga][va]amix=inputs=2:duration=first:normalize=0,loudnorm=I={LOUDNESS}:TP=-1.5:LRA=11[a]")
-    inputs = ["-i", str(game), "-i", str(face)]
+    inputs = ["-ss", str(ipad_start), "-i", str(game), "-i", str(face)]
 
     if only in (None, "horizontal"):
         pw = int(gw * PIP_WIDTH) // 2 * 2

@@ -5,6 +5,7 @@ import sys
 from gdvideo.claude import ask_json
 from gdvideo.config import CHANNEL, IG_MAX_HASHTAGS, YT_MAX_TAG_CHARS, YT_MAX_TITLE
 from gdvideo.media import probe, recording
+from gdvideo.subtitles import starts
 
 _TEXT = {"type": "string"}
 _LIST = {"type": "array", "items": _TEXT}
@@ -154,8 +155,9 @@ def post(folder, level=None, notes=None, force=False):
     if out.exists() and not force:
         sys.exit(f"{out} already exists. Use --force to write a new one.")
 
-    cues = json.loads(subs_path.read_text())["cues"]
-    duration = probe(recording(folder, "ipad"))[2]  # output videos have the iPad recording's length
+    subs = json.loads(subs_path.read_text())
+    cues = subs["cues"]
+    duration = probe(recording(folder, "ipad"))[2] - starts(subs)[0]  # output length: the iPad part used
     transcript = "\n".join(f"[{mmss(c['start'])}] {c['en'] or c['zh']}" for c in cues)
     prompt = POST_PROMPT.format(
         duration=mmss(duration),

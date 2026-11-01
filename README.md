@@ -5,7 +5,7 @@ Turns one Geometry Dash recording session into two videos:
 - `horizontal.mp4`: the game at its native ratio with the facecam in a small top-right window, for YouTube
 - `vertical-<langs>.mp4`: 1080×1920, facecam on top, game in the middle, burned-in subtitles, for 抖音, TikTok, Instagram Reels and YouTube Shorts. `<langs>` is the burned-in languages, e.g. `vertical-zh-en.mp4` (Chinese + English) or `vertical-en.mp4` (English only)
 
-It syncs the two recordings automatically, transcribes the voice locally with Whisper, has Claude clean and translate the subtitles, and renders with FFmpeg.
+It lines up the two recordings (both start together by default, or by start times you give), transcribes the voice locally with Whisper, has Claude clean and translate the subtitles, and renders with FFmpeg.
 
 ## Requirements
 
@@ -74,7 +74,7 @@ Each week: put `ipad.mov` and `face.mov` in a new dated folder, then run these f
 F=~/Downloads/GD/2026-11-03
 ```
 
-**1. Prep:** sync the recordings and transcribe the voice (about 30 s)
+**1. Prep:** transcribe the voice (about 30 s); add start times if the recordings didn't start together (see Step 1 below)
 
 ```sh
 .venv/bin/gdvideo prep $F
@@ -168,13 +168,23 @@ The folder then looks like this. `work/` and `export/` can be deleted at any tim
     pack/          one upload folder per platform (gdvideo pack)
 ```
 
-### Step 1: `prep` (sync and transcribe)
+### Step 1: `prep` (line up and transcribe)
 
 ```sh
 .venv/bin/gdvideo prep ~/Downloads/GD/2026-11-03
 ```
 
-Finds the sync offset and transcribes the voice with Whisper into `work/subs.raw.json`. If sync fails, pass the offset by hand: `--offset 1.09` (seconds into `face.mov` that match `ipad.mov` t=0). Use `--lang zh` to force the speech language.
+Transcribes the voice with Whisper into `work/subs.raw.json`. Use `--lang zh` to force the speech language.
+
+By default both recordings are taken to start at 0 s together. If they didn't, say where the video should begin in each one:
+
+| Option | Meaning | Example |
+|---|---|---|
+| `--ipad-start S` | seconds into `ipad.mov` where the video begins | `--ipad-start 11`: cut 11 s of static iPad screen |
+| `--face-start S` | seconds into `face.mov` that match that moment | `--face-start 1.09`: the facecam started 1.09 s earlier |
+| `--auto-sync` | measure `--face-start` from the audio (the facecam mic hears the iPad speaker) | |
+
+So "ipad 11 s = face 0 s" is `--ipad-start 11` (face start defaults to 0). `all` takes the same options. The values are saved in `subs.json` (`ipad_start`, `face_start`) and subtitle times count from the video start, so changing them means running prep and clean again: `gdvideo all <folder> --force --ipad-start 11`.
 
 ### Step 2: `clean` (clean and translate subtitles)
 
@@ -225,8 +235,8 @@ The code is a standard Python package in `src/gdvideo/`, installed in editable m
 |---|---|
 | `cli.py` | Command line (`gdvideo all/prep/clean/post/render/cover/pack`) |
 | `config.py` | All tunable settings and paths |
-| `transcribe.py` | `prep`: sync + Whisper → raw cues |
-| `sync.py` | Audio offset between the two recordings |
+| `transcribe.py` | `prep`: start times + Whisper → raw cues |
+| `sync.py` | `--auto-sync`: audio offset between the two recordings |
 | `clean.py` | `clean`: Claude API → `subs.json` |
 | `post.py` | `post`: Claude API → `post.md` (titles, descriptions, hashtags) |
 | `claude.py` | Shared Claude API call with structured output and error handling |

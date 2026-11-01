@@ -47,22 +47,23 @@ def split_cues(segments, offset):
     return [c for c in cues if c["end"] > 0]
 
 
-def prep(folder, offset=None, lang=None):
+def prep(folder, ipad_start=0.0, face_start=0.0, auto_sync=False, lang=None):
+    """Video t=0 is ipad_start seconds into the ipad recording and face_start into the face one (default: both
+    start together). auto_sync measures face_start from the audio instead."""
     work = folder / "work"
     work.mkdir(exist_ok=True)
     print("Extracting audio...", file=sys.stderr)
     game = extract_wav(recording(folder, "ipad"), work / "ipad.wav")
     voice = extract_wav(recording(folder, "face"), work / "face.wav")
 
-    if offset is not None:
-        print(f"Using manual offset {offset:+.3f}s", file=sys.stderr)
-    else:
+    if auto_sync:
         print("Syncing...", file=sys.stderr)
         offset, agree, total = find_offset(game, voice)
         print(f"Offset {offset:+.3f}s ({agree}/{total} windows agree)", file=sys.stderr)
         if agree < max(2, total / 2):
-            sys.exit("Sync is unreliable. Find the offset by hand and rerun with --offset SECONDS "
-                     "(seconds into the face recording that match the ipad one's t=0).")
+            sys.exit("Sync is unreliable. Set the starts by hand: --ipad-start SECONDS / --face-start SECONDS.")
+        face_start = ipad_start + offset  # negative: facecam started later, its first frame is held
+    print(f"Video starts at ipad {ipad_start:.2f}s, face {face_start:.2f}s", file=sys.stderr)
 
     print("Transcribing...", file=sys.stderr)
     import mlx_whisper
@@ -72,7 +73,8 @@ def prep(folder, offset=None, lang=None):
         condition_on_previous_text=False, language=lang,
         initial_prompt=("Geometry Dash. " + ", ".join(terms)) if terms else "Geometry Dash.")
 
-    cues = split_cues(result["segments"], offset)
-    data = {"offset": round(offset, 3), "language": result["language"], "cues": cues}
+    cues = split_cues(result["segments"], face_start)  # cue times are on the output video's timeline
+    data = {"ipad_start": round(ipad_start, 3), "face_start": round(face_start, 3), "language": result["language"],
+            "cues": cues}
     (work / "subs.raw.json").write_text(json.dumps(data, ensure_ascii=False, indent=1))
     print(f"Wrote {work / 'subs.raw.json'}: {len(cues)} cues, language {result['language']}", file=sys.stderr)

@@ -51,3 +51,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             lines.append(f"Dialogue: 0,{ass_time(c['start'])},{ass_time(c['end'])},Sub,,0,0,0,,"
                          rf"{{\pos({V_W // 2},{top})}}" + r"\N".join(parts))
     path.write_text(head + "\n".join(lines) + "\n")
+
+
+def starts(data):
+    """(ipad_start, face_start): seconds into each recording at video t=0. Reads older subs.json files too."""
+    if "ipad_start" in data:
+        return data["ipad_start"], data["face_start"]
+    start = data.get("start", 0)
+    return start, data["offset"] + start

@@ -4,6 +4,7 @@ import sys
 
 from gdvideo.claude import ask_json
 from gdvideo.config import GLOSSARY
+from gdvideo.subtitles import starts
 
 CLEAN_SCHEMA = {
     "type": "object",
@@ -73,7 +74,9 @@ def clean(folder, force=False):
     result = ask_json(prompt, CLEAN_SCHEMA, f"Cleaning {len(raw['cues'])} cues")
 
     cues = tidy_cues(result["cues"])
-    subs.write_text(json.dumps({"offset": raw["offset"], "language": raw["language"], "cues": cues},
+    ipad_start, face_start = starts(raw)
+    subs.write_text(json.dumps({"ipad_start": ipad_start, "face_start": face_start,
+                                "language": raw["language"], "cues": cues},
                                ensure_ascii=False, indent=1))
     print(f"Wrote {subs}: {len(cues)} cues", file=sys.stderr)
 

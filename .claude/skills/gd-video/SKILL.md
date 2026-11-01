@@ -18,12 +18,13 @@ Input: a folder (e.g. `~/Downloads/GD/2026-11-03`) with the two recordings.
    If the files have other names, identify them: the iPad file has the tag `com.apple.quicktime.author=ReplayKitRecording`
    (`ffprobe -v error -show_entries format_tags -of compact <file>`). Ask before renaming.
 
-2. **Prep (sync + transcribe):**
+2. **Prep (line up + transcribe):**
    ```
    ~/Documents/gd-video/.venv/bin/gdvideo prep <folder>
    ```
-   It prints the sync offset and how many 30 s windows agree. If it exits with "Sync is unreliable",
-   tell the user and ask for the offset (seconds into face.mov matching ipad.mov t=0), then rerun with `--offset`.
+   Both recordings are assumed to start together. If the user says they didn't, pass `--ipad-start S` (seconds into
+   ipad.mov where the video begins) and/or `--face-start S` (seconds into face.mov at that moment), or `--auto-sync`
+   to measure it from the audio. If auto-sync exits with "Sync is unreliable", ask the user for the start times.
 
 3. **Clean and translate:**
    ```
