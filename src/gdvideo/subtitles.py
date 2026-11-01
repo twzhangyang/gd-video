@@ -1,9 +1,14 @@
 """Subtitle file writers: SRT for platforms and 剪映, ASS for the burned-in vertical subtitles."""
-from gdvideo.config import SUB_FONT, V_H, V_W
+from gdvideo.config import SUB_END_STRIP, SUB_FONT, V_H, V_W
 
 
 def is_cleaned(data):
     return any(c.get("en") or c.get("zh") for c in data["cues"])
+
+
+def line(cue, field):
+    """A cue's text in one language, without the full stop / comma at the end."""
+    return (cue.get(field) or "").strip().rstrip(SUB_END_STRIP).rstrip()
 
 
 def srt_time(t):
@@ -19,7 +24,7 @@ def ass_time(t):
 def write_srt(cues, path, fields):
     blocks = []
     for c in cues:
-        text = "\n".join(c[f] for f in fields if c.get(f))
+        text = "\n".join(line(c, f) for f in fields if line(c, f))
         if text:
             blocks.append(f"{len(blocks) + 1}\n{srt_time(c['start'])} --> {srt_time(c['end'])}\n{text}\n")
     path.write_text("\n".join(blocks))
@@ -43,10 +48,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     lines = []
     for c in cues:
         parts = []
-        if "zh" in fields and c.get("zh"):
-            parts.append(c["zh"])
-        if "en" in fields and c.get("en"):
-            parts.append(r"{\fs52\c&H00FFFF&}" + c["en"] + r"{\r}")
+        if "zh" in fields and line(c, "zh"):
+            parts.append(line(c, "zh"))
+        if "en" in fields and line(c, "en"):
+            parts.append(r"{\fs52\c&H00FFFF&}" + line(c, "en") + r"{\r}")
         if parts:
             lines.append(f"Dialogue: 0,{ass_time(c['start'])},{ass_time(c['end'])},Sub,,0,0,0,,"
                          rf"{{\pos({V_W // 2},{top})}}" + r"\N".join(parts))

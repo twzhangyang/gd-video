@@ -45,7 +45,8 @@ PIP_TOP = 110             # px from the top, below the progress bar
 PIP_BORDER = 6            # white border around the facecam
 V_W, V_H = 1080, 1920     # vertical canvas
 V_BG = "black"
-SUB_GAP = 0              # px between the game and the first subtitle line
+SUB_GAP = -50              # px between the game and the first subtitle line
+SUB_END_STRIP = "。.，,、；;：:"  # removed from the end of each subtitle line; ？！?! and … stay
 SUB_FONT = "Hiragino Sans GB"  # macOS system font with a real bold; PingFang loads only as Medium in libass
 
 # Audio

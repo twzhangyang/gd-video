@@ -26,7 +26,7 @@ def test_write_srt_bilingual_skips_empty_lines(tmp_path):
     write_srt(CUES, path, ["zh", "en"])
     assert path.read_text() == (
         "1\n00:00:00,810 --> 00:00:03,190\n大家好！\nHello!\n\n"
-        "2\n00:00:03,190 --> 00:00:07,210\nElectroman Adventures.\n"
+        "2\n00:00:03,190 --> 00:00:07,210\nElectroman Adventures\n"
     )
 
 
@@ -55,3 +55,14 @@ def test_starts_reads_new_and_old_subs_json():
     assert starts({"ipad_start": 11.0, "face_start": 0.0}) == (11.0, 0.0)
     assert starts({"offset": 1.093}) == (0, 1.093)                 # older files: auto-sync offset
     assert starts({"offset": -10.9, "start": 10.9}) == (10.9, 0.0)
+
+
+def test_line_strips_ending_punctuation_but_keeps_questions():
+    from gdvideo.subtitles import line
+    assert line({"zh": "过 Electroman Adventures。"}, "zh") == "过 Electroman Adventures"
+    assert line({"en": "do Electroman Adventures."}, "en") == "do Electroman Adventures"
+    assert line({"en": "first coin, "}, "en") == "first coin"
+    assert line({"zh": "真的吗？"}, "zh") == "真的吗？"
+    assert line({"en": "Too easy?!"}, "en") == "Too easy?!"
+    assert line({"en": "So..."}, "en") == "So"
+    assert line({"en": ""}, "en") == ""
