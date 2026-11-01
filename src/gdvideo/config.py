@@ -36,6 +36,7 @@ COVER_LAYOUT = {
                  "title_x": 0.05, "title_y": 0.72, "title_w": 0.85, "title_size": 0.06, "title_bottom": 0.87},
 }
 COVER_TILT = 4            # degrees the logo and title are tilted (counter-clockwise)
+COVER_INTRO = 0.1         # seconds the cover shows at the start of the 抖音/TikTok videos, so it can be picked as cover
 
 # Layout
 PIP_WIDTH = 0.22          # horizontal: facecam width as a fraction of the canvas width

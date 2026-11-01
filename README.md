@@ -128,13 +128,13 @@ Each render takes about 1 minute. Steps 3–5 write separate files, so they can 
 
 → `export/cover-horizontal.jpg` for YouTube (a frame of `horizontal.mp4`, so render it first) and `export/cover-vertical.jpg` for 抖音, TikTok and Instagram (the vertical layout without subtitles; logo and title stay inside the 3:4 area those apps show in profile grids). `--only horizontal` or `--only vertical` makes just one. The title defaults to the level name from step 6; use `--text "Electroman Adventures"` to set it yourself, and `--at 1:05` to pick the frame (default: 30% into the video). Rerun with a different `--at` until you like the frame.
 
-**8. Pack for upload:** one folder per platform with everything that platform needs (instant)
+**8. Pack for upload:** one folder per platform with everything that platform needs
 
 ```sh
 .venv/bin/gdvideo pack $F --open
 ```
 
-→ `export/pack/youtube/`, `douyin/`, `tiktok/`, `instagram/`, each with `video.mp4`, `cover.jpg` and the text from `post.md` as `title.txt` / `description.txt` / `tags.txt` / `caption.txt` (YouTube also gets `captions-en.srt` and `captions-zh.srt`). Drag the files into each upload page or your scheduler. Videos are hard links, so the pack takes no extra disk space. It reads `post.md`, so edit that file (not the `.txt` files) and run `pack` again; the pack folder is rebuilt every time. Missing files are listed with the command that makes them. `--open` opens the folder in Finder.
+→ `export/pack/youtube/`, `douyin/`, `tiktok/`, `instagram/`, each with `video.mp4`, `cover.jpg` and `post.txt` (that platform's text from `post.md`: title, description and tags for YouTube, title and caption for 抖音, caption for TikTok and Instagram). YouTube also gets `captions-en.srt` and `captions-zh.srt`. Drag the files into each upload page or your scheduler. The 抖音 and TikTok videos start with the cover for 0.1 s (`COVER_INTRO`), since those apps pick the cover from a video frame: it's the default cover on 抖音, and on TikTok pick the first frame. That re-encodes those two videos once (about 45 s each, cached as `export/vertical-*-cover.mp4` and remade when the video or cover changes); the other videos are hard links, so they take no extra disk space. It reads `post.md`, so edit that file (not `post.txt`) and run `pack` again; the pack folder is rebuilt every time. Missing files are listed with the command that makes them. `--open` opens the folder in Finder.
 
 ## Usage
 
@@ -229,7 +229,7 @@ The code is a standard Python package in `src/gdvideo/`, installed in editable m
 | `post.py` | `post`: Claude API → `post.md` (titles, descriptions, hashtags) |
 | `claude.py` | Shared Claude API call with structured output and error handling |
 | `cover.py` | `cover`: horizontal and vertical covers with logo, emoji and title (Pillow) |
-| `pack.py` | `pack`: per-platform upload folders from `export/` and `post.md` |
+| `pack.py` | `pack`: per-platform upload folders from `export/` and `post.md`; cover intro for 抖音/TikTok |
 | `subtitles.py` | SRT and ASS writers |
 | `render.py` | `render`: both video layouts |
 | `media.py` | ffmpeg / ffprobe helpers |

@@ -53,7 +53,8 @@ Input: a folder (e.g. `~/Downloads/GD/2026-11-03`) with the two recordings.
    `<folder>/export/cover-horizontal.jpg` (YouTube) and `cover-vertical.jpg` (抖音/TikTok/Instagram); `--only` makes one. `--text` sets the title, `--at 1:05` picks the frame. Show it to the user.
 
 8. **Pack:** `~/Documents/gd-video/.venv/bin/gdvideo pack <folder>` builds `<folder>/export/pack/<platform>/`
-   (video, cover, captions, text files) for youtube, douyin, tiktok, instagram. If it lists missing files, run the
+   (video, cover, captions, `post.txt`) for youtube, douyin, tiktok, instagram. The 抖音 and TikTok videos start with
+   the cover for 0.1 s so it can be chosen as the cover (first frame). If it lists missing files, run the
    commands it prints, then pack again.
 
 9. **Report** the outputs in `<folder>/export/pack/` and `<folder>/post.md`:
