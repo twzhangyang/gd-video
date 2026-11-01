@@ -8,6 +8,11 @@ from gdvideo.media import detect_side_bars, encode_args, probe, recording, run
 from gdvideo.subtitles import is_cleaned, starts, write_ass, write_srt
 
 
+def output_duration(game_dur, face_dur, ipad_start, face_start):
+    """The video runs while both recordings do: it ends when the shorter one (after its start) ends."""
+    return min(game_dur - ipad_start, face_dur - face_start)
+
+
 def vertical_sizes(game_w, game_h, face_w, face_h):
     """Heights of the facecam (top) and the game (below it) in the 1080-wide vertical layout."""
     return round(V_W * face_h / face_w / 2) * 2, round(V_W * game_h / game_w / 2) * 2
@@ -25,9 +30,9 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
 
     game, face = recording(folder, "ipad"), recording(folder, "face")
     gw, gh, dur = probe(game)
-    fw, fh, _ = probe(face)
+    fw, fh, face_dur = probe(face)
     gw, gx = detect_side_bars(game, dur)
-    dur -= ipad_start
+    dur = output_duration(dur, face_dur, ipad_start, face_start)
     game_v = f"[0:v]crop={gw}:{gh}:{gx}:0,fps=60"
     suffix = ""
     if test:

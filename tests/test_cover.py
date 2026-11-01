@@ -55,3 +55,11 @@ def test_fit_title_prefers_one_line():
     from gdvideo.cover import fit_title
     font, lines = fit_title("Electroman Adventures", max_width=1500, max_size=130)
     assert lines == ["Electroman Adventures"] and font.size > 90
+
+
+def test_output_duration_ends_with_the_shorter_recording():
+    from gdvideo.render import output_duration
+    assert output_duration(200, 150, 0, 0) == 150       # facecam stopped first: cut the iPad
+    assert output_duration(171.6, 300, 0, 1.09) == 171.6  # iPad stopped first
+    assert output_duration(200, 190, 11, 0) == 189       # both trimmed at the start
+    assert output_duration(200, 150, 0, -5) == 155      # auto-sync: facecam started 5 s later (held frame)

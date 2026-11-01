@@ -29,7 +29,7 @@ Follow the vault's own `CLAUDE.md` when editing notes there (wikilinks, edit in 
 
 - 剪映 (8.3) encrypts its draft files, so the pipeline can't generate 剪映 projects. Everything renders with FFmpeg; `--subs none` + `bilingual.srt` is the hand-off to 剪映
 - `ipad.mov` has game audio only and `face.mov` has voice only (lav mic). By default both recordings are assumed to start together; `--ipad-start` / `--face-start` set where each begins. `--auto-sync` works because the lav picks up faint game sound from the iPad speaker: `find_offset` matches 30 s windows with GCC-PHAT and takes the majority value
-- `subs.json` has `ipad_start` and `face_start` (seconds into each recording at video t=0; `face_start` < 0 only from auto-sync, then the facecam's first frame is held). Cue times are on the video timeline; render, cover and post read both through `subtitles.starts()`, which also reads older files with `offset` / `start`
+- `subs.json` has `ipad_start` and `face_start` (seconds into each recording at video t=0; `face_start` < 0 only from auto-sync, then the facecam's first frame is held). Cue times are on the video timeline; render, cover and post read both through `subtitles.starts()`, which also reads older files with `offset` / `start`. The video ends when the shorter recording ends (`render.output_duration`)
 - iPad recordings are stored rotated (display matrix 90°) and have black side bars; `probe` handles rotation and `detect_side_bars` crops the bars
 - The facecam is variable frame rate (~27 fps); both inputs are converted to 60 fps
 

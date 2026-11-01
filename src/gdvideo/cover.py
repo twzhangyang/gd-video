@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 from gdvideo.config import (COVER_AT, COVER_EMOJI, COVER_FONT, COVER_LAYOUT, COVER_LOGO, COVER_MAX_WIDTH, COVER_TILT,
                             EMOJI_FONT, FFMPEG, V_BG, V_H, V_W)
 from gdvideo.media import detect_side_bars, probe, recording, run
-from gdvideo.render import vertical_sizes
+from gdvideo.render import output_duration, vertical_sizes
 from gdvideo.subtitles import starts
 
 
@@ -132,10 +132,10 @@ def vertical_frame(folder, at, path):
     ipad_start, face_start = starts(json.loads(subs.read_text()))
     game, face = recording(folder, "ipad"), recording(folder, "face")
     gw, gh, dur = probe(game)
-    fw, fh, _ = probe(face)
+    fw, fh, face_dur = probe(face)
     gw, gx = detect_side_bars(game, dur)
     face_h, game_h = vertical_sizes(gw, gh, fw, fh)
-    t = frame_time(at, dur - ipad_start)
+    t = frame_time(at, output_duration(dur, face_dur, ipad_start, face_start))
     vf = (f"[1:v]scale={V_W}:{face_h}[f];[0:v]crop={gw}:{gh}:{gx}:0,scale={V_W}:{game_h}[g];"
           f"[f][g]vstack,pad={V_W}:{V_H}:0:0:{V_BG}")
     run([FFMPEG, "-v", "error", "-y", "-ss", str(t + ipad_start), "-i", str(game),

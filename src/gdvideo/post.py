@@ -5,6 +5,7 @@ import sys
 from gdvideo.claude import ask_json
 from gdvideo.config import CHANNEL, IG_MAX_HASHTAGS, YT_MAX_TAG_CHARS, YT_MAX_TITLE
 from gdvideo.media import probe, recording
+from gdvideo.render import output_duration
 from gdvideo.subtitles import starts
 
 _TEXT = {"type": "string"}
@@ -157,7 +158,7 @@ def post(folder, level=None, notes=None, force=False):
 
     subs = json.loads(subs_path.read_text())
     cues = subs["cues"]
-    duration = probe(recording(folder, "ipad"))[2] - starts(subs)[0]  # output length: the iPad part used
+    duration = output_duration(probe(recording(folder, "ipad"))[2], probe(recording(folder, "face"))[2], *starts(subs))
     transcript = "\n".join(f"[{mmss(c['start'])}] {c['en'] or c['zh']}" for c in cues)
     prompt = POST_PROMPT.format(
         duration=mmss(duration),

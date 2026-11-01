@@ -184,7 +184,7 @@ By default both recordings are taken to start at 0 s together. If they didn't, s
 | `--face-start S` | seconds into `face.mov` that match that moment | `--face-start 1.09`: the facecam started 1.09 s earlier |
 | `--auto-sync` | measure `--face-start` from the audio (the facecam mic hears the iPad speaker) | |
 
-So "ipad 11 s = face 0 s" is `--ipad-start 11` (face start defaults to 0). `all` takes the same options. The values are saved in `subs.json` (`ipad_start`, `face_start`) and subtitle times count from the video start, so changing them means running prep and clean again: `gdvideo all <folder> --force --ipad-start 11`.
+The video ends when either recording ends, so if you stop the facecam first, the rest of the iPad recording is cut. So "ipad 11 s = face 0 s" is `--ipad-start 11` (face start defaults to 0). `all` takes the same options. The values are saved in `subs.json` (`ipad_start`, `face_start`) and subtitle times count from the video start, so changing them means running prep and clean again: `gdvideo all <folder> --force --ipad-start 11`.
 
 ### Step 2: `clean` (clean and translate subtitles)
 

@@ -50,7 +50,7 @@ SUB_END_STRIP = "。.，,、；;：:"  # removed from the end of each subtitle l
 SUB_FONT = "Hiragino Sans GB"  # macOS system font with a real bold; PingFang loads only as Medium in libass
 
 # Audio
-GAME_VOLUME = 0.3
+GAME_VOLUME = 0.1
 VOICE_VOLUME = 1.0
 LOUDNESS = -14            # LUFS, the target for YouTube/TikTok
 
