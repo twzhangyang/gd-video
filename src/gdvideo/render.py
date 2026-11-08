@@ -1,9 +1,11 @@
 """render: subs.json + recordings -> horizontal.mp4, vertical-<langs>.mp4 and SRT files."""
 import json
+import re
+import subprocess
 import sys
 
 from gdvideo.config import (FFMPEG, GAME_VOLUME, LOUDNESS, PIP_BORDER, PIP_MARGIN, PIP_TOP, PIP_WIDTH, SUB_FONT,
-                            SUB_GAP, V_BG, V_H, V_W, VOICE_VOLUME)
+                            SUB_GAP, SUB_GAP_EN, TRUE_PEAK, V_BG, V_H, V_W, VOICE_VOLUME)
 from gdvideo.media import detect_side_bars, encode_args, probe, recording, run
 from gdvideo.subtitles import is_cleaned, starts, write_ass, write_srt
 
@@ -16,6 +18,13 @@ def output_duration(game_dur, face_dur, ipad_start, face_start):
 def vertical_sizes(game_w, game_h, face_w, face_h):
     """Heights of the facecam (top) and the game (below it) in the 1080-wide vertical layout."""
     return round(V_W * face_h / face_w / 2) * 2, round(V_W * game_h / game_w / 2) * 2
+
+
+def loudness(inputs, mix, dur):
+    """Integrated loudness (LUFS) of the audio mix, measured before rendering so one fixed gain can be applied."""
+    err = subprocess.run([FFMPEG, "-hide_banner", "-nostats", "-vn", *inputs, "-filter_complex", f"{mix},ebur128",
+                          "-t", str(dur), "-f", "null", "-"], capture_output=True, text=True, check=True).stderr
+    return float(re.findall(r"I:\s+(-?[\d.]+) LUFS", err)[-1])
 
 
 def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
@@ -50,9 +59,13 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
     else:
         face_v = f"[1:v]tpad=start_duration={-face_start}:start_mode=clone,fps=60"
         face_a = f"[1:a]adelay={int(-face_start * 1000)}:all=1"
-    audio = (f"[0:a]volume={GAME_VOLUME}[ga];{face_a},volume={VOICE_VOLUME}[va];"
-             f"[ga][va]amix=inputs=2:duration=first:normalize=0,loudnorm=I={LOUDNESS}:TP=-1.5:LRA=11[a]")
     inputs = ["-ss", str(ipad_start), "-i", str(game), "-i", str(face)]
+    # One gain for the whole video, then a peak limiter. A single-pass loudnorm would act as an automatic gain
+    # control and turn up the pauses between words, and with them the game sound the facecam mic picks up.
+    mix = (f"[0:a]volume={GAME_VOLUME}[ga];{face_a},volume={VOICE_VOLUME}[va];"
+           f"[ga][va]amix=inputs=2:duration=first:normalize=0")
+    gain = LOUDNESS - loudness(inputs, mix, dur)
+    audio = f"{mix},volume={gain:.2f}dB,alimiter=limit={10 ** (TRUE_PEAK / 20):.3f}:level=0[a]"
 
     if only in (None, "horizontal"):
         pw = int(gw * PIP_WIDTH) // 2 * 2
@@ -68,7 +81,7 @@ def render(folder, subs="zh,en", only=None, burn_horizontal=False, test=None):
 
     if only in (None, "vertical"):
         face_h, game_h = vertical_sizes(gw, gh, fw, fh)
-        write_ass(cues, work / "v.ass", subs.split(","), face_h + game_h + SUB_GAP)
+        write_ass(cues, work / "v.ass", subs.split(","), face_h + game_h + (SUB_GAP_EN if subs == "en" else SUB_GAP))
         vf = (f"color=c={V_BG}:s={V_W}x{V_H}:r=60:d={dur}[bg];"
               f"{face_v},scale={V_W}:{face_h}[f];{game_v},scale={V_W}:{game_h}[g];"
               f"[bg][f]overlay=0:0:eof_action=repeat[b1];[b1][g]overlay=0:{face_h}:eof_action=repeat,"

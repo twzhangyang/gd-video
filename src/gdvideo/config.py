@@ -45,17 +45,21 @@ PIP_TOP = 110             # px from the top, below the progress bar
 PIP_BORDER = 6            # white border around the facecam
 V_W, V_H = 1080, 1920     # vertical canvas
 V_BG = "black"
-SUB_GAP = -50              # px between the game and the first subtitle line
+SUB_GAP = -70              # px between the game and the first subtitle line
+SUB_GAP_EN = 100           # same for the English-only vertical (vertical-en.mp4, TikTok + Instagram Reels)
 SUB_END_STRIP = "。.，,、；;：:"  # removed from the end of each subtitle line; ？！?! and … stay
+SUB_ZH_SIZE = 35          # vertical subtitles: Chinese line font size (px on the 1080x1920 canvas)
+SUB_EN_SIZE = 40           # vertical subtitles: English line font size
 SUB_FONT = "Hiragino Sans GB"  # macOS system font with a real bold; PingFang loads only as Medium in libass
 
 # Audio
-GAME_VOLUME = 0.3
+GAME_VOLUME = 0.1
 VOICE_VOLUME = 1.0
-LOUDNESS = -14            # LUFS, the target for YouTube/TikTok
+LOUDNESS = -14            # LUFS, the target for YouTube/TikTok; reached with one fixed gain for the whole video
+TRUE_PEAK = -1.5          # dBFS, peak limiter ceiling after that gain
 
 # Subtitle cue splitting
-MAX_CHARS = 42
+MAX_CHARS = 50
 MAX_DURATION = 4.0
 PAUSE_SPLIT = 0.5
 

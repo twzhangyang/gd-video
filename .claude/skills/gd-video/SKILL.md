@@ -44,7 +44,7 @@ Input: a folder (e.g. `~/Downloads/GD/2026-11-03`) with the two recordings.
    ~/Documents/gd-video/.venv/bin/gdvideo render <folder> [--subs zh,en|en|zh|none]
    ```
    Default burns bilingual subtitles into the vertical video. `--subs none` gives clean videos for editing in 剪映
-   (then import the SRT there). `--test 20` renders 20 s for a quick check. Takes about 2 minutes.
+   (then import the SRT there). `--subs en` places the subtitles at `SUB_GAP_EN`. `--test 20` renders 20 s for a quick check. Takes about 2 minutes.
    Changing layout or audio constants only needs `render` again, not `prep`.
 
 6. **Posting text:** `~/Documents/gd-video/.venv/bin/gdvideo post <folder>` writes `<folder>/post.md`
@@ -60,11 +60,11 @@ Input: a folder (e.g. `~/Downloads/GD/2026-11-03`) with the two recordings.
 
 9. **Report** the outputs in `<folder>/export/pack/` and `<folder>/post.md`:
    - `horizontal.mp4` → YouTube, upload `en.srt` and `zh.srt` as captions
-   - `vertical-zh-en.mp4` → 抖音 (Douyin); for TikTok / Instagram Reels render an English-only version with
-     `render <folder> --only vertical --subs en` → `vertical-en.mp4`
+   - `vertical-zh-en.mp4` → 抖音 (Douyin)
+   - `vertical-en.mp4` → TikTok and Instagram Reels (`render <folder> --only vertical --subs en`)
    - `bilingual.srt` → for 剪映 if they want to edit further
 
 ## Tuning
 
 Layout, volumes and models are constants in `src/gdvideo/config.py`
-(`PIP_WIDTH`, `PIP_TOP`, `GAME_VOLUME`, `VOICE_VOLUME`, `SUB_GAP`, `CLAUDE_MODEL`); the subtitle style is `write_ass` in `src/gdvideo/subtitles.py`.
+(`PIP_WIDTH`, `PIP_TOP`, `GAME_VOLUME`, `VOICE_VOLUME`, `SUB_GAP`, `SUB_GAP_EN`, `SUB_ZH_SIZE`, `SUB_EN_SIZE`, `CLAUDE_MODEL`); the subtitle style is `write_ass` in `src/gdvideo/subtitles.py`.

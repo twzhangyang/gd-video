@@ -108,7 +108,7 @@ F=~/Downloads/GD/2026-11-03
 .venv/bin/gdvideo render $F --only vertical --subs en
 ```
 
-→ `export/vertical-en.mp4`
+→ `export/vertical-en.mp4` (TikTok and Instagram Reels). The English-only subtitles sit at `SUB_GAP_EN` instead of `SUB_GAP`
 
 Each render takes about 1 minute. Steps 3–5 write separate files, so they can run in any order and never overwrite each other. After editing `subs.json`, rerun only the render steps.
 
@@ -226,7 +226,7 @@ Then run:
 
 ## Tuning
 
-Layout, audio mix, models and subtitle splitting are constants in `src/gdvideo/config.py`: `PIP_WIDTH`, `PIP_TOP`, `GAME_VOLUME`, `VOICE_VOLUME`, `LOUDNESS`, `SUB_GAP`, `CLAUDE_MODEL` and more. The subtitle style is in `write_ass` in `src/gdvideo/subtitles.py`.
+Layout, audio mix, models and subtitle splitting are constants in `src/gdvideo/config.py`: `PIP_WIDTH`, `PIP_TOP`, `GAME_VOLUME`, `VOICE_VOLUME`, `LOUDNESS`, `SUB_GAP`, `SUB_GAP_EN`, `SUB_ZH_SIZE`, `SUB_EN_SIZE`, `CLAUDE_MODEL` and more. The subtitle style is in `write_ass` in `src/gdvideo/subtitles.py`.
 
 ## Development
 
