@@ -5,7 +5,7 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 
 from gdvideo.config import (COVER_AT, COVER_EMOJI, COVER_FONT, COVER_LAYOUT, COVER_LOGO, COVER_MAX_WIDTH, COVER_TILT,
-                            EMOJI_FONT, FFMPEG, V_BG, V_H, V_W)
+                            COVER_TITLE_COLOR, COVER_TITLE_SHADOW, COVER_TITLE_STROKE, COVER_TITLE_STROKE_W, EMOJI_FONT, FFMPEG, V_BG, V_H, V_W)
 from gdvideo.media import detect_side_bars, probe, recording, run
 from gdvideo.render import output_duration, vertical_sizes
 from gdvideo.subtitles import starts
@@ -53,12 +53,13 @@ def emoji_image(emoji, height):
 
 
 def title_layer(text, max_width, max_size):
-    """Emoji + title, white brush lettering with a black outline, on a transparent layer, tilted."""
+    """Emoji + title, brush lettering with an outline and drop shadow, on a transparent layer, tilted."""
     font, lines = fit_title(text, max_width, max_size)
-    stroke = max(4, font.size // 12)
+    stroke = max(4, round(font.size * COVER_TITLE_STROKE_W))
+    sx, sy = (round(font.size * f) for f in COVER_TITLE_SHADOW) if COVER_TITLE_SHADOW else (0, 0)
     line_h = round(font.size * 1.15)
-    text_w = round(max(font.getlength(line) for line in lines)) + 2 * stroke
-    text_h = line_h * len(lines) + 2 * stroke
+    text_w = round(max(font.getlength(line) for line in lines)) + 2 * stroke + sx
+    text_h = line_h * len(lines) + 2 * stroke + sy
     emoji = emoji_image(COVER_EMOJI, round(min(text_h, font.size * 1.9))) if COVER_EMOJI else None
     gap = font.size // 6 if emoji else 0
     emoji_w = emoji.width if emoji else 0
@@ -69,8 +70,11 @@ def title_layer(text, max_width, max_size):
     draw = ImageDraw.Draw(layer)
     top = (layer.height - text_h) // 2 + stroke
     for i, line in enumerate(lines):
-        draw.text((emoji_w + gap + stroke, top + i * line_h), line, font=font, fill="white",
-                  stroke_width=stroke, stroke_fill="black")
+        xy = (emoji_w + gap + stroke, top + i * line_h)
+        if sx or sy:
+            draw.text((xy[0] + sx, xy[1] + sy), line, font=font, fill=COVER_TITLE_STROKE,
+                      stroke_width=stroke, stroke_fill=COVER_TITLE_STROKE)
+        draw.text(xy, line, font=font, fill=COVER_TITLE_COLOR, stroke_width=stroke, stroke_fill=COVER_TITLE_STROKE)
     return layer.rotate(COVER_TILT, resample=Image.BICUBIC, expand=True)
 
 
