@@ -53,8 +53,8 @@ V_BG = "black"
 SUB_GAP = -70              # px between the game and the first subtitle line
 SUB_GAP_EN = 100           # same for the English-only vertical (vertical-en.mp4, TikTok + Instagram Reels)
 SUB_END_STRIP = "。.，,、；;：:"  # removed from the end of each subtitle line; ？！?! and … stay
-SUB_ZH_SIZE = 35          # vertical subtitles: Chinese line font size (px on the 1080x1920 canvas)
-SUB_EN_SIZE = 35           # vertical subtitles: English line font size
+SUB_ZH_SIZE = 40         # vertical subtitles: Chinese line font size (px on the 1080x1920 canvas)
+SUB_EN_SIZE = 40           # vertical subtitles: English line font size
 SUB_FONT = "Hiragino Sans GB"  # macOS system font with a real bold; PingFang loads only as Medium in libass
 
 # Audio
