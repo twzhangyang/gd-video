@@ -35,13 +35,17 @@ COVER_LAYOUT = {
                    "title_x": 0.06, "title_y": 0.68, "title_w": 0.8, "title_size": 0.09, "title_bottom": 0.96},
     "vertical": {"logo_x": 0.05, "logo_y": 0.40, "logo_w": 0.65,
                  "title_x": 0.05, "title_y": 0.58, "title_w": 0.7, "title_size": 0.06, "title_bottom": 0.87},
+    # single recording: the facecam is already in the frame, top right
+    "single": {"logo_x": 0.09, "logo_y": 0.16, "logo_w": 0.5,
+               "title_x": 0.1, "title_y": 0.62, "title_w": 0.8, "title_size": 0.13, "title_bottom": 0.95},
 }
 COVER_TITLE_COLOR = "#FFE14D"     # title fill (GD yellow); any PIL color name or hex
 COVER_TITLE_STROKE = "#173A5E"    # title outline, the dark blue of the logo outline
 COVER_TITLE_STROKE_W = 0.10       # outline width as a fraction of the font size
 COVER_TITLE_SHADOW = (0.06, 0.08)  # drop shadow offset (x, y) as a fraction of the font size; None for no shadow
 COVER_TILT = 4            # degrees the logo and title are tilted (counter-clockwise)
-COVER_INTRO = 0.1         # seconds the cover shows at the start of the 抖音/TikTok videos, so it can be picked as cover
+COVER_INTRO = 0.1         # seconds the cover shows at the start of the 抖音/TikTok videos (and all single-recording
+                          # videos), so it can be picked as cover
 
 # Layout
 PIP_WIDTH = 0.22          # horizontal: facecam width as a fraction of the canvas width
@@ -56,6 +60,15 @@ SUB_END_STRIP = "。.，,、；;：:"  # removed from the end of each subtitle l
 SUB_ZH_SIZE = 40         # vertical subtitles: Chinese line font size (px on the 1080x1920 canvas)
 SUB_EN_SIZE = 40           # vertical subtitles: English line font size
 SUB_FONT = "Hiragino Sans GB"  # macOS system font with a real bold; PingFang loads only as Medium in libass
+
+# Single recording (OBS records the game and the facecam together as one video.mp4/.mov)
+# Subtitle sizes and positions are px on a 1080-high frame and scale with the video, so they mean the same on 4K.
+SINGLE_SUB_BOTTOM = 50       # 抖音 (zh + en): px from the bottom edge of the video to the bottom of the subtitles
+SINGLE_SUB_BOTTOM_EN = 50    # TikTok (en only): same
+SINGLE_SUB_ZH_SIZE = 46      # Chinese line font size
+SINGLE_SUB_EN_SIZE = 46      # English line font size
+SINGLE_BURN_HEIGHT = 1080    # TikTok and 抖音 videos are scaled down to this height (they don't show more); None keeps the size
+SINGLE_BITRATES = [(2160, "45M"), (1440, "16M"), (0, "12M")]  # video bitrate by output height (first row it reaches)
 
 # Audio
 GAME_VOLUME = 0.05

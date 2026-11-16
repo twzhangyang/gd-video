@@ -4,9 +4,8 @@ import sys
 
 from gdvideo.claude import ask_json
 from gdvideo.config import CHANNEL, IG_MAX_HASHTAGS, YT_MAX_TAG_CHARS, YT_MAX_TITLE
-from gdvideo.media import probe, recording
-from gdvideo.render import output_duration
-from gdvideo.subtitles import starts
+from gdvideo.media import mode
+from gdvideo.render import video_duration
 
 _TEXT = {"type": "string"}
 _LIST = {"type": "array", "items": _TEXT}
@@ -25,8 +24,13 @@ POST_SCHEMA = _obj(
     instagram=_obj(caption=_TEXT, hashtags=_LIST),
 )
 
-POST_PROMPT = """Write the posting text for a Geometry Dash gameplay video with live commentary. The same session is
-posted as a horizontal video on YouTube and as vertical short videos on 抖音 (Douyin), TikTok and Instagram Reels.
+FORMATS = {
+    "dual": "The same session is posted as a horizontal video on YouTube and as vertical short videos on 抖音 (Douyin), "
+            "TikTok and Instagram Reels.",
+    "single": "The same horizontal video is posted on YouTube, 抖音 (Douyin) and TikTok.",
+}
+
+POST_PROMPT = """Write the posting text for a Geometry Dash gameplay video with live commentary. {formats}
 Base everything on what actually happens in the transcript below; don't invent achievements.
 
 Video length: {duration}. {level_hint}{notes}
@@ -89,15 +93,18 @@ def hashtags(tags, limit=None):
     return " ".join("#" + t for t in list(dict.fromkeys(tags))[:limit])
 
 
-def format_post(data, duration):
+def format_post(data, duration, single=False):
+    """single: one recording posted to YouTube, 抖音 and TikTok (youtube.mp4, douyin.mp4, tiktok.mp4), no Instagram."""
     yt, dy, tt, ig = data["youtube"], data["douyin"], data["tiktok"], data["instagram"]
+    files = (("youtube.mp4", "douyin.mp4", "tiktok.mp4") if single
+             else ("horizontal.mp4", "vertical-zh-en.mp4", "vertical-en.mp4"))
     description = yt["description"].strip()
     chapters = fix_chapters(yt["chapters"], duration)
     if chapters:
         description += "\n\n" + "\n".join(f"{mmss(c['start'])} {c['title']}" for c in chapters)
     return f"""# Posting: {data['level']}
 
-## YouTube (horizontal.mp4, captions: en.srt + zh.srt)
+## YouTube ({files[0]}, captions: en.srt + zh.srt)
 
 **Title**
 
@@ -117,7 +124,7 @@ def format_post(data, duration):
 {", ".join(fit_tags(yt['tags']))}
 ```
 
-## 抖音 (vertical-zh-en.mp4)
+## 抖音 ({files[1]})
 
 **标题**
 
@@ -132,20 +139,20 @@ def format_post(data, duration):
 {hashtags(dy['hashtags'])}
 ```
 
-## TikTok (vertical-en.mp4)
+## TikTok ({files[2]})
 
 ```
 {tt['caption']}
 {hashtags(tt['hashtags'])}
 ```
-
+""" + ("" if single else f"""
 ## Instagram Reels (vertical-en.mp4)
 
 ```
 {ig['caption']}
 {hashtags(ig['hashtags'], IG_MAX_HASHTAGS)}
 ```
-"""
+""")
 
 
 def post(folder, level=None, notes=None, force=False):
@@ -158,9 +165,11 @@ def post(folder, level=None, notes=None, force=False):
 
     subs = json.loads(subs_path.read_text())
     cues = subs["cues"]
-    duration = output_duration(probe(recording(folder, "ipad"))[2], probe(recording(folder, "face"))[2], *starts(subs))
+    single = mode(folder) == "single"
+    duration = video_duration(folder, subs)
     transcript = "\n".join(f"[{mmss(c['start'])}] {c['en'] or c['zh']}" for c in cues)
     prompt = POST_PROMPT.format(
+        formats=FORMATS["single" if single else "dual"],
         duration=mmss(duration),
         level_hint=f"The level is {level}. " if level else "",
         notes=f"Extra notes from the creator: {notes}" if notes else "",
@@ -171,5 +180,5 @@ def post(folder, level=None, notes=None, force=False):
 
     (folder / "work").mkdir(exist_ok=True)
     (folder / "work" / "post.json").write_text(json.dumps(data, ensure_ascii=False, indent=1))
-    out.write_text(format_post(data, duration))
+    out.write_text(format_post(data, duration, single))
     print(f"Wrote {out}", file=sys.stderr)

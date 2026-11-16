@@ -5,6 +5,8 @@ Turns one Geometry Dash recording session into two videos:
 - `horizontal.mp4`: the game at its native ratio with the facecam in a small top-right window, for YouTube
 - `vertical-<langs>.mp4`: 1080×1920, facecam on top, game in the middle, burned-in subtitles, for 抖音, TikTok, Instagram Reels and YouTube Shorts. `<langs>` is the burned-in languages, e.g. `vertical-zh-en.mp4` (Chinese + English) or `vertical-en.mp4` (English only)
 
+A session can also be **one recording** made with OBS, with the game and the facecam already together (`video.mp4`). That gives one horizontal video per platform instead; see [One recording (OBS)](#one-recording-obs).
+
 It lines up the two recordings (both start together by default, or by start times you give), transcribes the voice locally with Whisper, has Claude clean and translate the subtitles, and renders with FFmpeg.
 
 ## Requirements
@@ -136,6 +138,35 @@ Each render takes about 1 minute. Steps 3–5 write separate files, so they can 
 
 → `export/pack/youtube/`, `douyin/`, `tiktok/`, `instagram/`, each with `video.mp4`, `cover.jpg` and `post.txt` (that platform's text from `post.md`: title, description and tags for YouTube, title and caption for 抖音, caption for TikTok and Instagram). YouTube also gets `captions-en.srt` and `captions-zh.srt`. Drag the files into each upload page or your scheduler. The 抖音 and TikTok videos start with the cover for 0.1 s (`COVER_INTRO`), since those apps pick the cover from a video frame: it's the default cover on 抖音, and on TikTok pick the first frame. That re-encodes those two videos once (about 45 s each, cached as `export/vertical-*-cover.mp4` and remade when the video or cover changes); the other videos are hard links, so they take no extra disk space. It reads `post.md`, so edit that file (not `post.txt`) and run `pack` again; the pack folder is rebuilt every time. Missing files are listed with the command that makes them. `--open` opens the folder in Finder.
 
+## One recording (OBS)
+
+When OBS records the game and the facecam together, put that one file in the dated folder as `video.mp4` (or `.mov` / `.m4v`), with no `ipad` or `face` file next to it:
+
+```sh
+F=~/Downloads/GD/2026-11-15
+.venv/bin/gdvideo all $F
+```
+
+The same commands work (`prep`, `clean`, `post`, `cover`, `render`, `pack`); they see `video.mp4` and switch to this mode. The video keeps its frame as recorded, and every export starts with the cover for 0.1 s (`COVER_INTRO`):
+
+| File in `export/` | For | Subtitles |
+|---|---|---|
+| `youtube.mp4` | YouTube, at the recorded size | none burned in; upload `en.srt` and `zh.srt` as captions |
+| `tiktok.mp4` | TikTok, scaled down to 1080 high | English at the bottom |
+| `douyin.mp4` | 抖音, scaled down to 1080 high | Chinese + English at the bottom |
+| `cover.jpg` | all three (also the first frame of each video) | |
+| `en.srt`, `zh.srt`, `bilingual.srt` | captions; times include the 0.1 s cover | |
+
+`export/pack/` then has `youtube/`, `douyin/` and `tiktok/` (no Instagram folder), each with `video.mp4`, `cover.jpg` and `post.txt`.
+
+- **Order:** `all` makes the cover before rendering, because the videos start with it. After changing the cover (`gdvideo cover $F --at 0:40`), run `render` and `pack` again
+- **One platform:** `gdvideo render $F --only youtube` (or `tiktok`, `douyin`). `--test 20` renders a 20 s clip to `<platform>-test.mp4`
+- **Subtitle position and size:** `SINGLE_SUB_BOTTOM` (抖音) and `SINGLE_SUB_BOTTOM_EN` (TikTok) in `config.py` are the px from the bottom edge of the video to the bottom of the subtitles; `SINGLE_SUB_ZH_SIZE` and `SINGLE_SUB_EN_SIZE` are the font sizes. All four are px on a 1080-high frame and scale with the recording, so they mean the same for a 4K recording
+- **Voice:** Whisper transcribes the recording's audio, which has the game and the voice mixed, so expect a few more unsure lines than with a separate voice recording. If OBS records the mic on a second audio track, `prep` transcribes the last track instead; the videos always use the first track
+- **Not used here:** `--ipad-start`, `--face-start`, `--auto-sync`, `--subs`, `--burn-horizontal` and `cover --only`
+
+Rendering all three takes a little less than the length of the video for a 4K recording (measured: 81 s of 4K took 40 s for `youtube.mp4` and 11 s each for the other two).
+
 ## Usage
 
 Put the two recordings in a dated folder with these names:
@@ -226,7 +257,7 @@ Then run:
 
 ## Tuning
 
-Layout, audio mix, models and subtitle splitting are constants in `src/gdvideo/config.py`: `PIP_WIDTH`, `PIP_TOP`, `GAME_VOLUME`, `VOICE_VOLUME`, `LOUDNESS`, `SUB_GAP`, `SUB_GAP_EN`, `SUB_ZH_SIZE`, `SUB_EN_SIZE`, `CLAUDE_MODEL` and more. The subtitle style is in `write_ass` in `src/gdvideo/subtitles.py`.
+Layout, audio mix, models and subtitle splitting are constants in `src/gdvideo/config.py`: `PIP_WIDTH`, `PIP_TOP`, `GAME_VOLUME`, `VOICE_VOLUME`, `LOUDNESS`, `SUB_GAP`, `SUB_GAP_EN`, `SUB_ZH_SIZE`, `SUB_EN_SIZE`, the `SINGLE_*` settings for one recording, `CLAUDE_MODEL` and more. The subtitle style is in `write_ass` in `src/gdvideo/subtitles.py`.
 
 ## Development
 
@@ -244,7 +275,8 @@ The code is a standard Python package in `src/gdvideo/`, installed in editable m
 | `cover.py` | `cover`: horizontal and vertical covers with logo, emoji and title (Pillow) |
 | `pack.py` | `pack`: per-platform upload folders from `export/` and `post.md`; cover intro for 抖音/TikTok |
 | `subtitles.py` | SRT and ASS writers |
-| `render.py` | `render`: both video layouts |
+| `render.py` | `render`: both video layouts (two recordings) |
+| `single.py` | `render` for one recording: cover + video per platform |
 | `media.py` | ffmpeg / ffprobe helpers |
 
 Run the tests with `.venv/bin/pytest`. They cover the pure functions (subtitle files, cue splitting, glossary parsing, sync, cue tidying, posting text, covers, packing) and need neither ffmpeg nor an API key.

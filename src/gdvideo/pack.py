@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 from gdvideo.config import COVER_INTRO, FFMPEG, FFPROBE
-from gdvideo.media import encode_args, probe, run
+from gdvideo.media import encode_args, mode, probe, run
 
 # Per platform: files to put in its folder (name in pack <- file in export/), the text blocks of its post.md
 # section in order (together saved as post.txt), and whether the cover is put at the start of the video
@@ -37,16 +37,40 @@ PLATFORMS = {
     },
 }
 
+# Single recording: every video already starts with the cover (single.render_single), so there is no cover_intro
+# step, and there is no Instagram folder.
+PLATFORMS_SINGLE = {
+    "youtube": {
+        "heading": "YouTube",
+        "files": {"video.mp4": "youtube.mp4", "cover.jpg": "cover.jpg",
+                  "captions-en.srt": "en.srt", "captions-zh.srt": "zh.srt"},
+        "texts": ["title", "description", "tags"],
+    },
+    "douyin": {
+        "heading": "抖音",
+        "files": {"video.mp4": "douyin.mp4", "cover.jpg": "cover.jpg"},
+        "texts": ["title", "caption"],
+    },
+    "tiktok": {
+        "heading": "TikTok",
+        "files": {"video.mp4": "tiktok.mp4", "cover.jpg": "cover.jpg"},
+        "texts": ["caption"],
+    },
+}
+
 # How to make each export file if it's missing
 MAKE = {
+    "youtube.mp4": "gdvideo render <folder> --only youtube",
+    "douyin.mp4": "gdvideo render <folder> --only douyin",
+    "tiktok.mp4": "gdvideo render <folder> --only tiktok",
+    "cover.jpg": "gdvideo cover <folder>",
     "horizontal.mp4": "gdvideo render <folder> --only horizontal",
     "vertical-zh-en.mp4": "gdvideo render <folder> --only vertical --subs zh,en",
     "vertical-en.mp4": "gdvideo render <folder> --only vertical --subs en",
     "cover-horizontal.jpg": "gdvideo cover <folder> --only horizontal",
     "cover-vertical.jpg": "gdvideo cover <folder> --only vertical",
-    "en.srt": "gdvideo render <folder> --only horizontal",
-    "zh.srt": "gdvideo render <folder> --only horizontal",
 }
+MAKE_SRT = {"dual": "gdvideo render <folder> --only horizontal", "single": "gdvideo render <folder> --only youtube"}
 
 
 def parse_post_md(text):
@@ -98,13 +122,15 @@ def pack(folder, open_folder=False):
     if not post_md.exists():
         sys.exit(f"{post_md} not found. Run: gdvideo post <folder>")
     sections = parse_post_md(post_md.read_text())
+    kind = mode(folder)
+    platforms = PLATFORMS_SINGLE if kind == "single" else PLATFORMS
     export = folder / "export"
     out = export / "pack"
     if out.exists():
         shutil.rmtree(out)  # generated folder; rebuilt from export/ and post.md every time
 
     missing = {}
-    for name, spec in PLATFORMS.items():
+    for name, spec in platforms.items():
         dest = out / name
         dest.mkdir(parents=True)
         for pack_name, export_name in spec["files"].items():
@@ -124,12 +150,12 @@ def pack(folder, open_folder=False):
         (dest / "post.txt").write_text(post_txt(spec["texts"], blocks))
 
     print(f"Packed {out}", file=sys.stderr)
-    for name, spec in PLATFORMS.items():
+    for name, spec in platforms.items():
         have = sorted(p.name for p in (out / name).iterdir())
         print(f"  {name:10s} {', '.join(have)}", file=sys.stderr)
     if missing:
         print("\nMissing (make them, then run pack again):", file=sys.stderr)
         for export_name, platforms in missing.items():
-            print(f"  {export_name:22s} for {', '.join(platforms):28s} -> {MAKE[export_name]}", file=sys.stderr)
+            print(f"  {export_name:22s} for {', '.join(platforms):28s} -> {MAKE.get(export_name, MAKE_SRT[kind])}", file=sys.stderr)
     if open_folder:
         subprocess.run(["open", str(out)])

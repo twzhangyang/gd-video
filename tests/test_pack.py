@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 from gdvideo.pack import pack, parse_post_md
 from gdvideo.post import format_post
 
@@ -64,3 +66,29 @@ def test_pack_puts_cover_at_start_of_douyin_and_tiktok_only(tmp_path, monkeypatc
     assert (out / "tiktok" / "video.mp4").read_text() == "cover + vertical-en.mp4"
     assert (out / "instagram" / "video.mp4").read_text() == "vertical-en.mp4"
     assert (out / "youtube" / "video.mp4").read_text() == "horizontal.mp4"
+
+
+def test_pack_single_recording_has_three_platforms_and_no_intro_step(tmp_path, monkeypatch, capsys):
+    (tmp_path / "video.mp4").write_text("")
+    (tmp_path / "post.md").write_text(format_post(DATA, duration=171, single=True))
+    export = tmp_path / "export"
+    export.mkdir()
+    for name in ("youtube.mp4", "douyin.mp4", "cover.jpg", "en.srt", "zh.srt"):
+        (export / name).write_text(name)
+    monkeypatch.setattr("gdvideo.pack.with_cover_intro", lambda *a: pytest.fail("videos already start with the cover"))
+
+    pack(tmp_path)
+
+    out = export / "pack"
+    assert sorted(p.name for p in out.iterdir()) == ["douyin", "tiktok", "youtube"]
+    assert sorted(p.name for p in (out / "youtube").iterdir()) == ["captions-en.srt", "captions-zh.srt", "cover.jpg",
+                                                                   "post.txt", "video.mp4"]
+    assert (out / "douyin" / "video.mp4").read_text() == "douyin.mp4"
+    assert (out / "tiktok" / "post.txt").read_text() == "[Caption]\nToo easy?\n#geometrydash\n"
+    assert "gdvideo render <folder> --only tiktok" in capsys.readouterr().err
+
+
+def test_format_post_single_names_the_single_files_and_drops_instagram():
+    text = format_post(DATA, duration=171, single=True)
+    assert "## YouTube (youtube.mp4" in text and "## 抖音 (douyin.mp4)" in text and "## TikTok (tiktok.mp4)" in text
+    assert "Instagram" not in text

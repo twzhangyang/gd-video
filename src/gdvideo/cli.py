@@ -6,18 +6,23 @@ from pathlib import Path
 
 from gdvideo.clean import clean
 from gdvideo.cover import cover
+from gdvideo.media import mode
 from gdvideo.pack import pack
 from gdvideo.post import post
 from gdvideo.render import render
+from gdvideo.single import TARGETS, render_single
 from gdvideo.transcribe import prep
 
 ALL_SUBS = ["zh,en", "en"]  # `all` renders these verticals: 抖音 (zh,en), TikTok/Instagram (en)
 
 DESCRIPTION = """Geometry Dash video pipeline: sync iPad gameplay + facecam, transcribe, render two layouts.
 
-Folder layout (one folder per video):
+Folder layout (one folder per video), either two recordings:
     <folder>/ipad.mov   gameplay (game audio only)   .mov, .mp4 or .m4v, any letter case (ipad.MP4)
     <folder>/face.mov   facecam (voice only)
+or one recording with the game and the facecam together (OBS):
+    <folder>/video.mp4  -> export/youtube.mp4 (no burned subtitles), tiktok.mp4 (en), douyin.mp4 (zh + en),
+                           each starting with the cover; render --only youtube|tiktok|douyin
 
 Commands:
     all    <folder>   prep + clean + post + render + cover + pack, skipping prep/clean/post/cover if done
@@ -47,6 +52,19 @@ def run_all(folder, args):
     else:
         post(folder, args.level, args.notes, args.force)
 
+    if mode(folder) == "single":
+        # Every video starts with the cover, so the cover comes before the render (and is needed for --test too)
+        if args.force or not (folder / "export" / "cover.jpg").exists():
+            cover(folder)
+        else:
+            print("Skipping cover: export/cover.jpg exists (gdvideo cover <folder> to remake)", file=sys.stderr)
+        render_single(folder, single_only(args.only), args.test)
+        if args.test:
+            print("Skipping pack: --test renders only a clip", file=sys.stderr)
+        else:
+            pack(folder)
+        return
+
     # Render what pack needs: horizontal once, then one vertical per subtitle variant
     variants = args.subs or ALL_SUBS
     if args.only != "vertical":
@@ -67,7 +85,17 @@ def run_all(folder, args):
     pack(folder)
 
 
+def single_only(only):
+    if only in ("horizontal", "vertical"):
+        sys.exit(f"--only {only} is for ipad + face recordings; with a single video use --only {' | '.join(TARGETS)}")
+    return only
+
+
 def run_render(folder, args):
+    if mode(folder) == "single":
+        return render_single(folder, single_only(args.only), args.test)
+    if args.only in TARGETS:
+        sys.exit(f"--only {args.only} is for a single video recording; here use --only horizontal | vertical")
     render(folder, args.subs, args.only, args.burn_horizontal, args.test)
 
 
@@ -91,7 +119,8 @@ def main():
                             "(default: zh,en and en, the two that pack uses)")
         else:
             sp.add_argument("--subs", default="zh,en", help="burned-in subtitle languages for vertical: zh,en | en | zh | none; output is vertical-<langs>.mp4, e.g. vertical-zh-en.mp4")
-        sp.add_argument("--only", choices=["horizontal", "vertical"])
+        sp.add_argument("--only", choices=["horizontal", "vertical", *TARGETS], help="render one output: horizontal | "
+                        "vertical (ipad + face), or youtube | tiktok | douyin (single video)")
         sp.add_argument("--burn-horizontal", action="store_true", help="also burn subtitles into the horizontal video")
         sp.add_argument("--test", type=float, help="render only the first N seconds to *-test.mp4 (quick check)")
 

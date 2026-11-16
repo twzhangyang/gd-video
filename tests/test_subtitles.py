@@ -1,3 +1,4 @@
+from gdvideo.config import SUB_EN_SIZE
 from gdvideo.subtitles import ass_time, is_cleaned, srt_time, write_ass, write_srt
 
 CUES = [
@@ -41,7 +42,23 @@ def test_write_ass_positions_and_languages(tmp_path):
     write_ass(CUES, path, ["zh", "en"], top=1510)
     events = [l for l in path.read_text().splitlines() if l.startswith("Dialogue:")]
     assert len(events) == 2
-    assert r"{\pos(540,1510)}大家好！\N{\fs52" in events[0]
+    assert r"{\pos(540,1510)}大家好！\N{\fs" + str(SUB_EN_SIZE) in events[0]
+
+
+def test_write_ass_bottom_anchor_on_another_canvas(tmp_path):
+    path = tmp_path / "douyin.ass"
+    write_ass(CUES, path, ["zh", "en"], bottom=50, size=(1920, 1080), zh_size=46, en_size=44)
+    text = path.read_text()
+    assert "PlayResX: 1920\nPlayResY: 1080" in text and ",46,&H00FFFFFF" in text
+    events = [l for l in text.splitlines() if l.startswith("Dialogue:")]
+    assert r"{\an2\pos(960,1030)}大家好！\N{\fs44" in events[0]   # bottom of the block 50 px above the bottom edge
+    assert r"{\an2\pos(960,1030)}{\fs44" in events[1]            # a one-line cue ends at the same place
+
+
+def test_write_srt_shift_for_the_cover_intro(tmp_path):
+    path = tmp_path / "en.srt"
+    write_srt(CUES, path, ["en"], shift=0.1)
+    assert "00:00:00,910 --> 00:00:03,290" in path.read_text()
 
 
 def test_write_ass_none_has_no_events(tmp_path):

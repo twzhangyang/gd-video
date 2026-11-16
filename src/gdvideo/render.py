@@ -6,13 +6,20 @@ import sys
 
 from gdvideo.config import (FFMPEG, GAME_VOLUME, LOUDNESS, PIP_BORDER, PIP_MARGIN, PIP_TOP, PIP_WIDTH, SUB_FONT,
                             SUB_GAP, SUB_GAP_EN, TRUE_PEAK, V_BG, V_H, V_W, VOICE_VOLUME)
-from gdvideo.media import detect_side_bars, encode_args, probe, recording, run
+from gdvideo.media import detect_side_bars, encode_args, mode, probe, recording, run
 from gdvideo.subtitles import is_cleaned, starts, write_ass, write_srt
 
 
 def output_duration(game_dur, face_dur, ipad_start, face_start):
     """The video runs while both recordings do: it ends when the shorter one (after its start) ends."""
     return min(game_dur - ipad_start, face_dur - face_start)
+
+
+def video_duration(folder, data):
+    """Length of the finished video, for either kind of session (data: subs.json)."""
+    if mode(folder) == "single":
+        return probe(recording(folder, "video"))[2]
+    return output_duration(probe(recording(folder, "ipad"))[2], probe(recording(folder, "face"))[2], *starts(data))
 
 
 def vertical_sizes(game_w, game_h, face_w, face_h):

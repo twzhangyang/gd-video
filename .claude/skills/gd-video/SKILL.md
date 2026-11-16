@@ -1,6 +1,6 @@
 ---
 name: gd-video
-description: Turn a Geometry Dash recording session (iPad gameplay ipad.mov + MacBook facecam face.mov) into a horizontal YouTube video and a vertical 9:16 video with cleaned bilingual (zh/en) subtitles. Use when the user gives a GD video folder or asks to make/render/subtitle a Geometry Dash video.
+description: Turn a Geometry Dash recording session (iPad gameplay ipad.mov + MacBook facecam face.mov, or one OBS recording video.mp4) into a horizontal YouTube video and a vertical 9:16 video (or, for one recording, a video per platform) with cleaned bilingual (zh/en) subtitles. Use when the user gives a GD video folder or asks to make/render/subtitle a Geometry Dash video.
 ---
 
 # gd-video
@@ -63,6 +63,21 @@ Input: a folder (e.g. `~/Downloads/GD/2026-11-03`) with the two recordings.
    - `vertical-zh-en.mp4` → 抖音 (Douyin)
    - `vertical-en.mp4` → TikTok and Instagram Reels (`render <folder> --only vertical --subs en`)
    - `bilingual.srt` → for 剪映 if they want to edit further
+
+## One recording (OBS)
+
+If the folder has `video.mp4` (game and facecam recorded together) instead of `ipad.mov` + `face.mov`, the same
+commands switch to single-recording mode. If the file has another name, ask before renaming it to `video.<ext>`.
+
+- Steps 2–4 are the same, without the start-time options (`--ipad-start`, `--face-start`, `--auto-sync` exit with an error)
+- Order after cleaning: `post`, then `cover` (writes `export/cover.jpg` from a frame of the recording), then `render`,
+  because every video starts with the cover. `gdvideo all <folder>` does this
+- `render` writes `export/youtube.mp4` (no burned subtitles; `en.srt` + `zh.srt` are the captions), `tiktok.mp4`
+  (English at the bottom) and `douyin.mp4` (Chinese + English at the bottom). `--only youtube|tiktok|douyin`
+  renders one; `--subs` and `--burn-horizontal` are not used
+- `pack` makes `youtube/`, `douyin/` and `tiktok/` (no Instagram)
+- Subtitle distance from the bottom: `SINGLE_SUB_BOTTOM` (抖音) and `SINGLE_SUB_BOTTOM_EN` (TikTok); sizes:
+  `SINGLE_SUB_ZH_SIZE`, `SINGLE_SUB_EN_SIZE` (px on a 1080-high frame)
 
 ## Tuning
 

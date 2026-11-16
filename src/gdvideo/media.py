@@ -22,6 +22,20 @@ def recording(folder, name):
     return found[0]
 
 
+def mode(folder):
+    """'single' when the folder has one combined recording (video.mp4 from OBS), 'dual' for ipad + face."""
+    names = {p.stem.lower() for p in folder.iterdir() if p.suffix.lower() in VIDEO_EXTENSIONS} if folder.is_dir() else set()
+    if "video" in names and names & {"ipad", "face"}:
+        sys.exit(f"{folder} has both a video recording and ipad/face recordings. Keep one kind per folder.")
+    return "single" if "video" in names else "dual"
+
+
+def stream_info(path, stream, entry):
+    """One ffprobe value of a stream, e.g. stream_info(p, 'v:0', 'r_frame_rate'). '' if there is no such stream."""
+    return subprocess.run([FFPROBE, "-v", "error", "-select_streams", stream, "-show_entries", f"stream={entry}",
+                           "-of", "csv=p=0", str(path)], capture_output=True, text=True, check=True).stdout.strip()
+
+
 def run(cmd, **kw):
     print("+", " ".join(str(c) for c in cmd[:6]), "...", file=sys.stderr)
     subprocess.run(cmd, check=True, **kw)
@@ -55,8 +69,9 @@ def detect_side_bars(path, duration):
     return int(w), int(x)
 
 
-def extract_wav(src, dst):
-    run([FFMPEG, "-v", "error", "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", str(SR), str(dst)])
+def extract_wav(src, dst, track=0):
+    run([FFMPEG, "-v", "error", "-y", "-i", str(src), "-vn", "-map", f"0:a:{track}", "-ac", "1", "-ar", str(SR),
+         str(dst)])
     return wavfile.read(dst)[1].astype(np.float64)
 
 

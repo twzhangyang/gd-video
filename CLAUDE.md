@@ -1,6 +1,6 @@
 # gd-video
 
-Pipeline that turns a Geometry Dash recording session (iPad gameplay + MacBook facecam) into a horizontal YouTube video and a vertical 9:16 video with bilingual subtitles. Setup and usage are in `README.md`.
+Pipeline that turns a Geometry Dash recording session into videos with bilingual subtitles. Two kinds of session: two recordings (iPad gameplay + MacBook facecam → a horizontal YouTube video and a vertical 9:16 video), or one OBS recording with the game and facecam together (`video.mp4` → the same horizontal video per platform: YouTube, TikTok, 抖音). Setup and usage are in `README.md`.
 
 ## Product context lives in Obsidian
 
@@ -20,6 +20,7 @@ Follow the vault's own `CLAUDE.md` when editing notes there (wikilinks, edit in 
 ## Code
 
 - Python package in `src/gdvideo/` (module map in `README.md`) with the `gdvideo` command and subcommands `prep` (start times + Whisper → `work/subs.raw.json`), `clean` (Claude API → `<folder>/subs.json` + `work/review.txt`), `post` (Claude API → `<folder>/post.md`), `render` (`subs.json` → `export/`), `cover` (logo + title on a frame → `export/cover-horizontal.jpg` from `horizontal.mp4`, `cover-vertical.jpg` built from the recordings without subtitles), `pack` (hard links of `export/` files + `post.txt` from the text blocks parsed from `post.md` → `export/pack/<platform>/`, rebuilt every run; 抖音/TikTok videos get the cover as a `COVER_INTRO` first frame, cached as `export/vertical-*-cover.mp4`) and `all` (prep, clean, post, render horizontal + `vertical-zh-en` + `vertical-en` (TikTok and Instagram; subtitle position `SUB_GAP_EN`), cover, pack; skips prep/clean/post/cover whose output exists). `work/` and `export/` are disposable; the cleaned `subs.json` sits next to the recordings so deleting them never loses subtitle work
+- A folder with `video.mp4` (any of `.mov/.mp4/.m4v`) is a single recording: `media.mode(folder)` returns `single` and every command switches on it (two kinds in one folder is an error). `prep` transcribes the video's own audio (last audio track if there are several), `cover` writes one `export/cover.jpg` from a source frame, `render` is `single.render_single`: one FFmpeg pass per platform (`TARGETS`) that puts the cover in front (`COVER_INTRO`) and burns that platform's subtitles → `export/youtube.mp4` (none, source size), `tiktok.mp4` (en), `douyin.mp4` (zh + en), both scaled to `SINGLE_BURN_HEIGHT`. SRT times are shifted by `COVER_INTRO` to match. `pack` uses `PLATFORMS_SINGLE` (no Instagram, no intro step), and `all` runs cover before render. Subtitle position and size are `SINGLE_SUB_*`, in px on a 1080-high frame (`single.ASS_HEIGHT`)
 - The pipeline must run from the terminal without Claude Code. `clean` and `post` call the Anthropic API directly through `claude.ask_json` (`CLAUDE_MODEL`, structured output; rules in `CLEAN_PROMPT` / `POST_PROMPT`); it needs `ANTHROPIC_API_KEY`. The cleanup rules live in `CLEAN_PROMPT` and `glossary.md`, not in the skill
 - Installed editable in the venv: `.venv/bin/pip install -e '.[dev]'`, run as `.venv/bin/gdvideo ...`. Dependencies are pinned in `pyproject.toml`
 - FFmpeg is `ffmpeg-full` (keg-only, has libass) at `/opt/homebrew/opt/ffmpeg-full/bin/`. The regular brew `ffmpeg` has no `subtitles` filter
@@ -35,11 +36,11 @@ Follow the vault's own `CLAUDE.md` when editing notes there (wikilinks, edit in 
 
 ## Testing
 
-There are no unit tests. To check a change, render a short clip of a real session and look at frames:
+`.venv/bin/pytest` covers the pure functions (no ffmpeg or API key needed). To check a layout change, render a short clip of a real session and look at frames:
 
 ```sh
 .venv/bin/gdvideo render <folder> --test 20
 ffmpeg -ss 10 -i <folder>/export/vertical-zh-en-test.mp4 -frames:v 1 /tmp/check.jpg
 ```
 
-Sample session: `~/Downloads/GD/2026-11-03`.
+Sample sessions: `~/Downloads/GD/2026-11-10` (two recordings), `~/Downloads/GD/2026-11-15` (one OBS recording, 4K, 81 s; `gdvideo render <folder> --only douyin --test 20`).

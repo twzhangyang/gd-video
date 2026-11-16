@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from gdvideo.config import (COVER_AT, COVER_EMOJI, COVER_FONT, COVER_LAYOUT, COVER_LOGO, COVER_MAX_WIDTH, COVER_TILT,
                             COVER_TITLE_COLOR, COVER_TITLE_SHADOW, COVER_TITLE_STROKE, COVER_TITLE_STROKE_W, EMOJI_FONT, FFMPEG, V_BG, V_H, V_W)
-from gdvideo.media import detect_side_bars, probe, recording, run
+from gdvideo.media import detect_side_bars, mode, probe, recording, run
 from gdvideo.render import output_duration, vertical_sizes
 from gdvideo.subtitles import starts
 
@@ -148,13 +148,23 @@ def vertical_frame(folder, at, path):
     return t
 
 
+def single_frame(folder, at, path):
+    """A frame of the single recording, which already has the facecam in it."""
+    video = recording(folder, "video")
+    t = frame_time(at, probe(video)[2])
+    run([FFMPEG, "-v", "error", "-y", "-ss", str(t), "-i", str(video), "-frames:v", "1", str(path)])
+    return t
+
+
 def cover(folder, text=None, at=None, formats=("horizontal", "vertical")):
+    """Single recording: one cover, export/cover.jpg, whatever `formats` says."""
     title = text or cover_title(folder)
     (folder / "work").mkdir(exist_ok=True)
     (folder / "export").mkdir(exist_ok=True)
-    for fmt in formats:
+    frames = {"horizontal": horizontal_frame, "vertical": vertical_frame, "single": single_frame}
+    for fmt in ["single"] if mode(folder) == "single" else formats:
         frame_path = folder / "work" / f"cover-frame-{fmt}.png"
-        t = (horizontal_frame if fmt == "horizontal" else vertical_frame)(folder, at, frame_path)
-        out = folder / "export" / f"cover-{fmt}.jpg"
+        t = frames[fmt](folder, at, frame_path)
+        out = folder / "export" / ("cover.jpg" if fmt == "single" else f"cover-{fmt}.jpg")
         compose(Image.open(frame_path), title, layout=fmt).save(out, quality=90)
         print(f"Wrote {out} (frame at {int(t) // 60}:{int(t) % 60:02d}, title \"{title}\")", file=sys.stderr)

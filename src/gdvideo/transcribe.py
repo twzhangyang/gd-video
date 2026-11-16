@@ -4,7 +4,7 @@ import re
 import sys
 
 from gdvideo.config import GLOSSARY, GLOSSARY_TERM_SECTIONS, MAX_CHARS, MAX_DURATION, PAUSE_SPLIT, WHISPER_MODEL
-from gdvideo.media import extract_wav, recording
+from gdvideo.media import extract_wav, mode, recording, stream_info
 from gdvideo.sync import find_offset
 
 
@@ -53,8 +53,21 @@ def prep(folder, ipad_start=0.0, face_start=0.0, auto_sync=False, lang=None):
     work = folder / "work"
     work.mkdir(exist_ok=True)
     print("Extracting audio...", file=sys.stderr)
-    game = extract_wav(recording(folder, "ipad"), work / "ipad.wav")
-    voice = extract_wav(recording(folder, "face"), work / "face.wav")
+    if mode(folder) == "single":
+        if ipad_start or face_start or auto_sync:
+            sys.exit("--ipad-start, --face-start and --auto-sync are for ipad + face recordings; "
+                     "a single video recording is used from its start.")
+        # One recording: nothing to line up. If OBS recorded the mic on its own track (the last one), transcribe that
+        video = recording(folder, "video")
+        tracks = len(stream_info(video, "a", "index").split())
+        if not tracks:
+            sys.exit(f"{video} has no audio track to transcribe.")
+        if tracks > 1:
+            print(f"Using audio track {tracks} of {tracks} as the voice", file=sys.stderr)
+        extract_wav(video, work / "face.wav", tracks - 1)
+    else:
+        game = extract_wav(recording(folder, "ipad"), work / "ipad.wav")
+        voice = extract_wav(recording(folder, "face"), work / "face.wav")
 
     if auto_sync:
         print("Syncing...", file=sys.stderr)
@@ -63,7 +76,8 @@ def prep(folder, ipad_start=0.0, face_start=0.0, auto_sync=False, lang=None):
         if agree < max(2, total / 2):
             sys.exit("Sync is unreliable. Set the starts by hand: --ipad-start SECONDS / --face-start SECONDS.")
         face_start = ipad_start + offset  # negative: facecam started later, its first frame is held
-    print(f"Video starts at ipad {ipad_start:.2f}s, face {face_start:.2f}s", file=sys.stderr)
+    if mode(folder) == "dual":
+        print(f"Video starts at ipad {ipad_start:.2f}s, face {face_start:.2f}s", file=sys.stderr)
 
     print("Transcribing...", file=sys.stderr)
     import mlx_whisper
