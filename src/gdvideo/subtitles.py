@@ -1,4 +1,4 @@
-"""Subtitle file writers: SRT for platforms and 剪映, ASS for the burned-in vertical subtitles."""
+"""Subtitle file writers: SRT for YouTube and 剪映, ASS for the burned-in vertical subtitles."""
 from gdvideo.config import SUB_EN_SIZE, SUB_END_STRIP, SUB_FONT, SUB_ZH_SIZE, V_H, V_W
 
 
@@ -31,14 +31,15 @@ def write_srt(cues, path, fields, shift=0.0):
     path.write_text("\n".join(blocks))
 
 
-def write_ass(cues, path, fields, top=None, bottom=None, size=(V_W, V_H), zh_size=SUB_ZH_SIZE, en_size=SUB_EN_SIZE):
+def write_ass(cues, path, fields, bottom, size=(V_W, V_H), zh_size=SUB_ZH_SIZE, en_size=SUB_EN_SIZE, shift=0.0):
     """Burned-in subtitles: Chinese (white) above English (yellow), centred on a canvas of `size`.
 
-    top: y of the top of the first line (vertical layout, below the game). bottom: px from the bottom edge of the
-    canvas to the bottom of the last line instead (single recording), so one and two lines end at the same place.
+    bottom: px from the bottom edge of the canvas to the bottom of the last line, so one and two lines end at the
+    same place. shift: seconds added to every time (cue times are on the horizontal recording's timeline; the
+    vertical one starts `shift` seconds earlier). Speech from before the video starts is dropped.
     """
     width, height = size
-    place = rf"{{\an2\pos({width // 2},{height - bottom})}}" if bottom is not None else rf"{{\pos({width // 2},{top})}}"
+    place = rf"{{\an2\pos({width // 2},{height - bottom})}}"
     head = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {width}
@@ -60,15 +61,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             parts.append(line(c, "zh"))
         if "en" in fields and line(c, "en"):
             parts.append(rf"{{\fs{en_size}\c&H00FFFF&}}" + line(c, "en") + r"{\r}")
-        if parts:
-            lines.append(f"Dialogue: 0,{ass_time(c['start'])},{ass_time(c['end'])},Sub,,0,0,0,,"
+        start, end = max(c["start"] + shift, 0), c["end"] + shift
+        if parts and end > start:
+            lines.append(f"Dialogue: 0,{ass_time(start)},{ass_time(end)},Sub,,0,0,0,,"
                          + place + r"\N".join(parts))
     path.write_text(head + "\n".join(lines) + "\n")
-
-
-def starts(data):
-    """(ipad_start, face_start): seconds into each recording at video t=0. Reads older subs.json files too."""
-    if "ipad_start" in data:
-        return data["ipad_start"], data["face_start"]
-    start = data.get("start", 0)
-    return start, data["offset"] + start

@@ -1,29 +1,29 @@
 import pytest
 
-from gdvideo.media import mode, recording
+from gdvideo.media import recordings
 
 
-def test_recording_finds_any_extension_and_case(tmp_path):
-    (tmp_path / "ipad.MP4").write_text("")
-    (tmp_path / "face.mov").write_text("")
-    (tmp_path / "ipad.wav").write_text("")  # not a video
-    assert recording(tmp_path, "ipad").name == "ipad.MP4"
-    assert recording(tmp_path, "face").name == "face.mov"
+def test_recordings_finds_obs_names_any_extension_and_case(tmp_path):
+    (tmp_path / "2026-11-17 21-07-00.MOV").write_text("")
+    (tmp_path / "2026-11-17 21-07-02-vertical.mov").write_text("")
+    (tmp_path / "voice.wav").write_text("")     # not a video
+    (tmp_path / "export").mkdir()               # outputs are in subfolders
+    horizontal, vertical = recordings(tmp_path)
+    assert horizontal.name == "2026-11-17 21-07-00.MOV"
+    assert vertical.name == "2026-11-17 21-07-02-vertical.mov"
 
 
-def test_recording_missing_or_ambiguous_exits(tmp_path):
-    with pytest.raises(SystemExit, match="No ipad recording"):
-        recording(tmp_path, "ipad")
-    (tmp_path / "ipad.mov").write_text("")
-    (tmp_path / "ipad.mp4").write_text("")
-    with pytest.raises(SystemExit, match="More than one"):
-        recording(tmp_path, "ipad")
+def test_recordings_plain_names(tmp_path):
+    (tmp_path / "horizontal.mp4").write_text("")
+    (tmp_path / "Vertical.mp4").write_text("")
+    assert [p.name for p in recordings(tmp_path)] == ["horizontal.mp4", "Vertical.mp4"]
 
 
-def test_mode_single_when_there_is_one_video_recording(tmp_path):
-    assert mode(tmp_path) == "dual"            # empty folder: the ipad + face errors explain what is missing
-    (tmp_path / "video.MOV").write_text("")
-    assert mode(tmp_path) == "single"
-    (tmp_path / "face.mov").write_text("")
-    with pytest.raises(SystemExit, match="both"):
-        mode(tmp_path)
+def test_recordings_missing_or_ambiguous_exits(tmp_path):
+    (tmp_path / "a.mov").write_text("")
+    with pytest.raises(SystemExit, match="Found: a.mov"):
+        recordings(tmp_path)                    # no vertical recording
+    (tmp_path / "a-vertical.mov").write_text("")
+    (tmp_path / "b.mov").write_text("")
+    with pytest.raises(SystemExit, match="two videos"):
+        recordings(tmp_path)                    # two horizontal candidates

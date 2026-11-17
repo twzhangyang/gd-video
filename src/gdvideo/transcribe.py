@@ -1,11 +1,12 @@
-"""prep: sync the recordings and transcribe the voice into raw subtitle cues."""
+"""prep: line up the vertical recording with the horizontal one and transcribe the voice into raw cues."""
 import json
 import re
 import sys
 
-from gdvideo.config import GLOSSARY, GLOSSARY_TERM_SECTIONS, MAX_CHARS, MAX_DURATION, PAUSE_SPLIT, WHISPER_MODEL
-from gdvideo.media import extract_wav, mode, recording, stream_info
-from gdvideo.sync import find_offset
+from gdvideo.config import (GLOSSARY, GLOSSARY_TERM_SECTIONS, MAX_CHARS, MAX_DURATION, PAUSE_SPLIT, SR, SYNC_WINDOW,
+                            WHISPER_MODEL)
+from gdvideo.media import audio_tracks, extract_wav, recordings
+from gdvideo.sync import find_offset, sync_window
 
 
 def glossary_terms(path=GLOSSARY):
@@ -24,7 +25,7 @@ def glossary_terms(path=GLOSSARY):
 
 
 def split_cues(segments, offset):
-    """Whisper word timestamps -> short cues on the ipad timeline."""
+    """Whisper word timestamps -> short cues, `offset` seconds earlier."""
     words = [w for s in segments for w in s.get("words", [])]
     cues, cur = [], []
 
@@ -47,48 +48,50 @@ def split_cues(segments, offset):
     return [c for c in cues if c["end"] > 0]
 
 
-def prep(folder, ipad_start=0.0, face_start=0.0, auto_sync=False, lang=None):
-    """Video t=0 is ipad_start seconds into the ipad recording and face_start into the face one (default: both
-    start together). auto_sync measures face_start from the audio instead."""
+def measure_vertical_start(horizontal, vertical, work):
+    """Seconds into the vertical recording at horizontal t=0. Both recordings carry the same audio (OBS records the
+    same sources on both canvases), so it is found by matching their first audio tracks."""
+    if not audio_tracks(vertical):
+        sys.exit(f"{vertical.name} has no audio, so it can't be lined up. Set it by hand: --vertical-start SECONDS "
+                 "(seconds into the vertical recording when the horizontal one starts; 0 if they started together)")
+    ref = extract_wav(horizontal, work / "horizontal-sync.wav")
+    other = extract_wav(vertical, work / "vertical-sync.wav")
+    window = sync_window(min(len(ref), len(other)) / SR, SYNC_WINDOW)
+    offset, agree, total = find_offset(ref, other, window)
+    print(f"Vertical recording offset {offset:+.3f}s ({agree}/{total} windows agree)", file=sys.stderr)
+    if agree < max(2, total / 2):
+        sys.exit("Lining up the vertical recording is unreliable. Set it by hand: --vertical-start SECONDS")
+    return offset
+
+
+def prep(folder, vertical_start=None, lang=None):
+    """Transcribe the horizontal recording; cue times are on its timeline. vertical_start (seconds into the vertical
+    recording at horizontal t=0) is measured from the audio unless given."""
     work = folder / "work"
     work.mkdir(exist_ok=True)
+    horizontal, vertical = recordings(folder)
     print("Extracting audio...", file=sys.stderr)
-    if mode(folder) == "single":
-        if ipad_start or face_start or auto_sync:
-            sys.exit("--ipad-start, --face-start and --auto-sync are for ipad + face recordings; "
-                     "a single video recording is used from its start.")
-        # One recording: nothing to line up. If OBS recorded the mic on its own track (the last one), transcribe that
-        video = recording(folder, "video")
-        tracks = len(stream_info(video, "a", "index").split())
-        if not tracks:
-            sys.exit(f"{video} has no audio track to transcribe.")
-        if tracks > 1:
-            print(f"Using audio track {tracks} of {tracks} as the voice", file=sys.stderr)
-        extract_wav(video, work / "face.wav", tracks - 1)
-    else:
-        game = extract_wav(recording(folder, "ipad"), work / "ipad.wav")
-        voice = extract_wav(recording(folder, "face"), work / "face.wav")
+    tracks = audio_tracks(horizontal)
+    if not tracks:
+        sys.exit(f"{horizontal} has no audio track to transcribe.")
+    if tracks > 1:
+        # OBS can record the mic on its own track; the voice-only track (the last one) gives cleaner subtitles
+        print(f"Using audio track {tracks} of {tracks} as the voice", file=sys.stderr)
+    extract_wav(horizontal, work / "voice.wav", tracks - 1)
 
-    if auto_sync:
-        print("Syncing...", file=sys.stderr)
-        offset, agree, total = find_offset(game, voice)
-        print(f"Offset {offset:+.3f}s ({agree}/{total} windows agree)", file=sys.stderr)
-        if agree < max(2, total / 2):
-            sys.exit("Sync is unreliable. Set the starts by hand: --ipad-start SECONDS / --face-start SECONDS.")
-        face_start = ipad_start + offset  # negative: facecam started later, its first frame is held
-    if mode(folder) == "dual":
-        print(f"Video starts at ipad {ipad_start:.2f}s, face {face_start:.2f}s", file=sys.stderr)
+    if vertical_start is None:
+        print("Lining up the vertical recording...", file=sys.stderr)
+        vertical_start = measure_vertical_start(horizontal, vertical, work)
 
     print("Transcribing...", file=sys.stderr)
     import mlx_whisper
     terms = glossary_terms()
     result = mlx_whisper.transcribe(
-        str(work / "face.wav"), path_or_hf_repo=WHISPER_MODEL, word_timestamps=True,
+        str(work / "voice.wav"), path_or_hf_repo=WHISPER_MODEL, word_timestamps=True,
         condition_on_previous_text=False, language=lang,
         initial_prompt=("Geometry Dash. " + ", ".join(terms)) if terms else "Geometry Dash.")
 
-    cues = split_cues(result["segments"], face_start)  # cue times are on the output video's timeline
-    data = {"ipad_start": round(ipad_start, 3), "face_start": round(face_start, 3), "language": result["language"],
-            "cues": cues}
+    cues = split_cues(result["segments"], 0)
+    data = {"vertical_start": round(vertical_start, 3), "language": result["language"], "cues": cues}
     (work / "subs.raw.json").write_text(json.dumps(data, ensure_ascii=False, indent=1))
     print(f"Wrote {work / 'subs.raw.json'}: {len(cues)} cues, language {result['language']}", file=sys.stderr)

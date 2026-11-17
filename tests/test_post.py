@@ -38,10 +38,10 @@ def test_format_post_includes_every_platform_and_chapters():
                     "tags": ["geometry dash"], "chapters": CHAPTERS},
         "douyin": {"title": "电人冒险攻略", "caption": "冲！", "hashtags": ["几何冲刺"]},
         "tiktok": {"caption": "Too easy?", "hashtags": ["geometrydash"]},
-        "instagram": {"caption": "Coin route", "hashtags": ["gd"]},
     }
     text = format_post(data, duration=171)
-    for heading in ("## YouTube", "## 抖音", "## TikTok", "## Instagram Reels"):
+    for heading in ("## YouTube (horizontal recording", "## 抖音 (douyin.mp4)", "## TikTok (tiktok.mp4)"):
         assert heading in text
+    assert "Instagram" not in text
     assert "How to beat it.\n\n0:00 Intro\n0:22 First coin\n1:45 Practice" in text
     assert "冲！\n#几何冲刺" in text

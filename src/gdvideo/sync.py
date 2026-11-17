@@ -1,4 +1,4 @@
-"""Find the offset between the iPad recording and the facecam from their audio."""
+"""Find the offset between the horizontal and the vertical recording from their audio."""
 import sys
 
 import numpy as np
@@ -17,19 +17,24 @@ def gcc_phat(a, b):
     return (i - len(b)) / SR, (c[i] - c.mean()) / c.std()
 
 
-def find_offset(game, voice, window=30):
-    """Seconds into face.mov that line up with ipad.mov t=0.
+def find_offset(ref, other, window=30):
+    """Seconds into `other` that line up with `ref` t=0.
 
-    The facecam mic hears a little game audio from the iPad speaker; match it in
-    30 s windows and take the value most windows agree on.
+    Match `other` in windows of `window` seconds against `ref` and take the value most windows agree on.
+    Returns (offset, windows that agree, windows).
     """
     lags = []
-    for start in range(0, int(len(voice) / SR) - window + 1, window):
-        seg = voice[start * SR:(start + window) * SR]
-        lag, z = gcc_phat(game, seg)
+    for start in range(0, int(len(other) / SR) - window + 1, window):
+        seg = other[start * SR:(start + window) * SR]
+        lag, z = gcc_phat(ref, seg)
         lags.append(start - lag)
         print(f"  window {start:4d}s: offset {start - lag:+.3f}s (z={z:.1f})", file=sys.stderr)
     lags = np.array(lags)
     best = max(lags, key=lambda x: np.sum(np.abs(lags - x) < 0.1))
     agree = lags[np.abs(lags - best) < 0.1]
     return float(np.median(agree)), len(agree), len(lags)
+
+
+def sync_window(duration, longest=30):
+    """Window length for find_offset: `longest`, or shorter so a short recording still has 3 windows."""
+    return max(3, min(longest, int(duration / 3)))

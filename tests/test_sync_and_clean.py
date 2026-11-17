@@ -2,18 +2,33 @@ import numpy as np
 
 from gdvideo.clean import tidy_cues
 from gdvideo.config import SR
-from gdvideo.sync import find_offset
+from gdvideo.sync import find_offset, sync_window
 
 
 def test_find_offset_recovers_known_shift():
     rng = np.random.default_rng(0)
     game = rng.standard_normal(100 * SR)
-    shift = 1.25  # face.mov started 1.25 s before ipad.mov
+    shift = 1.25  # the second recording started 1.25 s before the first
     voice = np.concatenate([rng.standard_normal(int(shift * SR)), game[:90 * SR] * 0.05])
     voice += rng.standard_normal(len(voice)) * 0.5  # the voice is much louder than the game bleed
     offset, agree, total = find_offset(game, voice)
     assert abs(offset - shift) < 0.01
     assert agree == total
+
+
+def test_find_offset_same_audio_on_both_recordings():
+    rng = np.random.default_rng(1)
+    horizontal = rng.standard_normal(40 * SR)
+    vertical = np.concatenate([rng.standard_normal(2 * SR), horizontal])[:41 * SR]  # vertical started 2 s earlier
+    offset, agree, total = find_offset(horizontal, vertical, sync_window(40))
+    assert abs(offset - 2) < 0.01
+    assert total == 3 and agree == total
+
+
+def test_sync_window_shorter_for_short_recordings():
+    assert sync_window(238) == 30
+    assert sync_window(40) == 13
+    assert sync_window(5) == 3
 
 
 def test_tidy_cues_sorts_removes_overlap_and_empty():

@@ -1,6 +1,6 @@
 # gd-video
 
-Pipeline that turns a Geometry Dash recording session into videos with bilingual subtitles. Two kinds of session: two recordings (iPad gameplay + MacBook facecam → a horizontal YouTube video and a vertical 9:16 video), or one OBS recording with the game and facecam together (`video.mp4` → the same horizontal video per platform: YouTube, TikTok, 抖音). Setup and usage are in `README.md`.
+Pipeline that turns a Geometry Dash recording session into uploads with bilingual subtitles. OBS records each session twice at the same time, both with game + facecam: the horizontal recording goes to YouTube untouched (with `en.srt` / `zh.srt` captions), the vertical 1080×1920 one (Aitum Vertical) becomes TikTok (English burned in) and 抖音 (Chinese + English burned in). Setup and usage are in `README.md`.
 
 ## Product context lives in Obsidian
 
@@ -19,8 +19,9 @@ Follow the vault's own `CLAUDE.md` when editing notes there (wikilinks, edit in 
 
 ## Code
 
-- Python package in `src/gdvideo/` (module map in `README.md`) with the `gdvideo` command and subcommands `prep` (start times + Whisper → `work/subs.raw.json`), `clean` (Claude API → `<folder>/subs.json` + `work/review.txt`), `post` (Claude API → `<folder>/post.md`), `render` (`subs.json` → `export/`), `cover` (logo + title on a frame → `export/cover-horizontal.jpg` from `horizontal.mp4`, `cover-vertical.jpg` built from the recordings without subtitles), `pack` (hard links of `export/` files + `post.txt` from the text blocks parsed from `post.md` → `export/pack/<platform>/`, rebuilt every run; 抖音/TikTok videos get the cover as a `COVER_INTRO` first frame, cached as `export/vertical-*-cover.mp4`) and `all` (prep, clean, post, render horizontal + `vertical-zh-en` + `vertical-en` (TikTok and Instagram; subtitle position `SUB_GAP_EN`), cover, pack; skips prep/clean/post/cover whose output exists). `work/` and `export/` are disposable; the cleaned `subs.json` sits next to the recordings so deleting them never loses subtitle work
-- A folder with `video.mp4` (any of `.mov/.mp4/.m4v`) is a single recording: `media.mode(folder)` returns `single` and every command switches on it (two kinds in one folder is an error). `prep` transcribes the video's own audio (last audio track if there are several), `cover` writes one `export/cover.jpg` from a source frame, `render` is `single.render_single`: one FFmpeg pass per platform (`TARGETS`) that puts the cover in front (`COVER_INTRO`) and burns that platform's subtitles → `export/youtube.mp4` (none, source size), `tiktok.mp4` (en), `douyin.mp4` (zh + en), both scaled to `SINGLE_BURN_HEIGHT`. SRT times are shifted by `COVER_INTRO` to match. `pack` uses `PLATFORMS_SINGLE` (no Instagram, no intro step), and `all` runs cover before render. Subtitle position and size are `SINGLE_SUB_*`, in px on a 1080-high frame (`single.ASS_HEIGHT`)
+- Python package in `src/gdvideo/` (module map in `README.md`) with the `gdvideo` command and subcommands `prep` (vertical offset + Whisper on the horizontal recording → `work/subs.raw.json`), `clean` (Claude API → `<folder>/subs.json` + `work/review.txt`), `post` (Claude API → `<folder>/post.md`), `cover` (logo + title on the same moment of each recording → `export/cover-horizontal.jpg`, `cover-vertical.jpg`), `render` (vertical recording → `export/tiktok.mp4`, `douyin.mp4`, each starting with the vertical cover for `COVER_INTRO`; plus `en/zh/bilingual.srt`), `pack` (hard links + `post.txt` from the text blocks parsed from `post.md` → `export/pack/<platform>/`, rebuilt every run; YouTube gets the horizontal recording itself) and `all` (prep, clean, post, cover, render, pack; skips prep/clean/post/cover whose output exists). `work/` and `export/` are disposable; `subs.json` and `post.md` sit next to the recordings so deleting them never loses work
+- `media.recordings(folder)` finds the two videos: the one with "vertical" in its name (Aitum saves `<date>-vertical.mov`) and the other one. No renaming needed
+- Cue times in `subs.json` are on the horizontal recording's timeline. `vertical_start` (seconds into the vertical recording at horizontal t=0, negative if it started later) shifts them for the burned-in ASS (`write_ass(shift=...)`) and picks the vertical cover frame
 - The pipeline must run from the terminal without Claude Code. `clean` and `post` call the Anthropic API directly through `claude.ask_json` (`CLAUDE_MODEL`, structured output; rules in `CLEAN_PROMPT` / `POST_PROMPT`); it needs `ANTHROPIC_API_KEY`. The cleanup rules live in `CLEAN_PROMPT` and `glossary.md`, not in the skill
 - Installed editable in the venv: `.venv/bin/pip install -e '.[dev]'`, run as `.venv/bin/gdvideo ...`. Dependencies are pinned in `pyproject.toml`
 - FFmpeg is `ffmpeg-full` (keg-only, has libass) at `/opt/homebrew/opt/ffmpeg-full/bin/`. The regular brew `ffmpeg` has no `subtitles` filter
@@ -28,11 +29,11 @@ Follow the vault's own `CLAUDE.md` when editing notes there (wikilinks, edit in 
 
 ## Facts that shaped the design
 
-- 剪映 (8.3) encrypts its draft files, so the pipeline can't generate 剪映 projects. Everything renders with FFmpeg; `--subs none` + `bilingual.srt` is the hand-off to 剪映
-- `ipad.mov` has game audio only and `face.mov` has voice only (lav mic). By default both recordings are assumed to start together; `--ipad-start` / `--face-start` set where each begins. `--auto-sync` works because the lav picks up faint game sound from the iPad speaker: `find_offset` matches 30 s windows with GCC-PHAT and takes the majority value
-- `subs.json` has `ipad_start` and `face_start` (seconds into each recording at video t=0; `face_start` < 0 only from auto-sync, then the facecam's first frame is held). Cue times are on the video timeline; render, cover and post read both through `subtitles.starts()`, which also reads older files with `offset` / `start`. The video ends when the shorter recording ends (`render.output_duration`)
-- iPad recordings are stored rotated (display matrix 90°) and have black side bars; `probe` handles rotation and `detect_side_bars` crops the bars
-- The facecam is variable frame rate (~27 fps); both inputs are converted to 60 fps
+- 剪映 (8.3) encrypts its draft files, so the pipeline can't generate 剪映 projects. Everything renders with FFmpeg; `bilingual.srt` is the hand-off to 剪映
+- The two OBS recordings don't start at the same instant (2026-11-17: the vertical one started 1.6 s later). Both carry the same audio mix, so `find_offset` (GCC-PHAT over windows, majority value) measures it reliably; `sync_window` shortens the window for short recordings
+- YouTube gets the horizontal recording without re-encoding: the thumbnail and captions are uploaded separately and YouTube normalizes loudness itself. Only TikTok and 抖音 need the cover as the first frame
+- The Aitum layout (2026-11-17) is facecam y 0–810, game 810–1506, black below. Subtitles sit in that black band (`VERTICAL_SUB_BOTTOM*`) and the vertical cover's logo and title over the game (`COVER_LAYOUT["vertical"]`); retune both if the OBS layout changes
+- The horizontal recording may have several audio tracks; `prep` transcribes the last one (record the mic alone there)
 
 ## Testing
 
@@ -40,7 +41,7 @@ Follow the vault's own `CLAUDE.md` when editing notes there (wikilinks, edit in 
 
 ```sh
 .venv/bin/gdvideo render <folder> --test 20
-ffmpeg -ss 10 -i <folder>/export/vertical-zh-en-test.mp4 -frames:v 1 /tmp/check.jpg
+ffmpeg -ss 4 -i <folder>/export/douyin-test.mp4 -frames:v 1 /tmp/check.jpg
 ```
 
-Sample sessions: `~/Downloads/GD/2026-11-10` (two recordings), `~/Downloads/GD/2026-11-15` (one OBS recording, 4K, 81 s; `gdvideo render <folder> --only douyin --test 20`).
+Sample session: `~/Downloads/GD/2026-11-17` (horizontal 2992×1934 + vertical 1080×1920, 60 fps, 4 min; a subtitle shows at 4 s). Older folders (`2026-11-10` iPad + facecam, `2026-11-15` single recording) are from removed modes and no longer run.

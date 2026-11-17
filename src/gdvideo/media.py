@@ -1,6 +1,5 @@
 """ffmpeg / ffprobe helpers."""
 import json
-import re
 import subprocess
 import sys
 
@@ -12,22 +11,22 @@ from gdvideo.config import FFMPEG, FFPROBE, SR
 VIDEO_EXTENSIONS = {".mov", ".mp4", ".m4v"}
 
 
-def recording(folder, name):
-    """The recording called <name> in the folder, whatever its extension and letter case (ipad.mov, ipad.MP4)."""
-    found = sorted(p for p in folder.iterdir() if p.stem.lower() == name and p.suffix.lower() in VIDEO_EXTENSIONS)
-    if not found:
-        sys.exit(f"No {name} recording in {folder}: expected {name}.mov or {name}.mp4")
-    if len(found) > 1:
-        sys.exit(f"More than one {name} recording in {folder}: {', '.join(p.name for p in found)}. Keep one.")
-    return found[0]
+def recordings(folder):
+    """(horizontal, vertical): the two OBS recordings in the folder. The vertical one has "vertical" in its name
+    (Aitum Vertical saves "<date>-vertical.mov"; vertical.mp4 works too), the horizontal one is the other video."""
+    videos = sorted(p for p in folder.iterdir()
+                    if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS and not p.name.startswith("."))
+    vertical = [p for p in videos if "vertical" in p.stem.lower()]
+    horizontal = [p for p in videos if p not in vertical]
+    if len(horizontal) != 1 or len(vertical) != 1:
+        found = ", ".join(p.name for p in videos) or "none"
+        sys.exit(f"{folder} should have two videos: the horizontal recording and the vertical one (with \"vertical\" "
+                 f"in its name). Found: {found}")
+    return horizontal[0], vertical[0]
 
 
-def mode(folder):
-    """'single' when the folder has one combined recording (video.mp4 from OBS), 'dual' for ipad + face."""
-    names = {p.stem.lower() for p in folder.iterdir() if p.suffix.lower() in VIDEO_EXTENSIONS} if folder.is_dir() else set()
-    if "video" in names and names & {"ipad", "face"}:
-        sys.exit(f"{folder} has both a video recording and ipad/face recordings. Keep one kind per folder.")
-    return "single" if "video" in names else "dual"
+def audio_tracks(path):
+    return len(stream_info(path, "a", "index").split())
 
 
 def stream_info(path, stream, entry):
@@ -54,19 +53,6 @@ def probe(path):
     if rot in (90, 270):
         w, h = h, w
     return w, h, float(j["format"]["duration"])
-
-
-def detect_side_bars(path, duration):
-    """Width and x of the game area inside the iPad recording (it has black bars left and right)."""
-    found = []
-    for t in (duration * 0.25, duration * 0.5, duration * 0.75):
-        out = subprocess.run(
-            [FFMPEG, "-v", "info", "-ss", str(t), "-i", str(path), "-t", "5",
-             "-vf", "cropdetect=limit=24:round=2", "-f", "null", "-"],
-            capture_output=True, text=True).stderr
-        found += re.findall(r"crop=(\d+):\d+:(\d+):\d+", out)
-    w, x = max(set(found), key=found.count)
-    return int(w), int(x)
 
 
 def extract_wav(src, dst, track=0):

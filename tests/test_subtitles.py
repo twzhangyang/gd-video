@@ -37,12 +37,24 @@ def test_write_srt_drops_cues_without_text(tmp_path):
     assert path.read_text().count("-->") == 1
 
 
-def test_write_ass_positions_and_languages(tmp_path):
-    path = tmp_path / "v.ass"
-    write_ass(CUES, path, ["zh", "en"], top=1510)
-    events = [l for l in path.read_text().splitlines() if l.startswith("Dialogue:")]
+def test_write_ass_vertical_bottom_anchor_and_languages(tmp_path):
+    path = tmp_path / "douyin.ass"
+    write_ass(CUES, path, ["zh", "en"], bottom=420)
+    text = path.read_text()
+    assert "PlayResX: 1080\nPlayResY: 1920" in text
+    events = [l for l in text.splitlines() if l.startswith("Dialogue:")]
     assert len(events) == 2
-    assert r"{\pos(540,1510)}大家好！\N{\fs" + str(SUB_EN_SIZE) in events[0]
+    assert r"{\an2\pos(540,1500)}大家好！\N{\fs" + str(SUB_EN_SIZE) in events[0]
+
+
+def test_write_ass_shift_onto_the_vertical_timeline(tmp_path):
+    path = tmp_path / "tiktok.ass"
+    write_ass(CUES, path, ["en"], bottom=420, shift=2.0)   # vertical recording started 2 s earlier
+    events = [l for l in path.read_text().splitlines() if l.startswith("Dialogue:")]
+    assert events[0].startswith("Dialogue: 0,0:00:02.81,0:00:05.19,")
+    write_ass(CUES, path, ["en"], bottom=420, shift=-3.5)  # started 3.5 s later: the first cue was before it
+    events = [l for l in path.read_text().splitlines() if l.startswith("Dialogue:")]
+    assert len(events) == 1 and events[0].startswith("Dialogue: 0,0:00:00.00,0:00:03.71,")
 
 
 def test_write_ass_bottom_anchor_on_another_canvas(tmp_path):
@@ -61,17 +73,6 @@ def test_write_srt_shift_for_the_cover_intro(tmp_path):
     assert "00:00:00,910 --> 00:00:03,290" in path.read_text()
 
 
-def test_write_ass_none_has_no_events(tmp_path):
-    path = tmp_path / "v.ass"
-    write_ass(CUES, path, ["none"], top=1510)
-    assert "Dialogue:" not in path.read_text()
-
-
-def test_starts_reads_new_and_old_subs_json():
-    from gdvideo.subtitles import starts
-    assert starts({"ipad_start": 11.0, "face_start": 0.0}) == (11.0, 0.0)
-    assert starts({"offset": 1.093}) == (0, 1.093)                 # older files: auto-sync offset
-    assert starts({"offset": -10.9, "start": 10.9}) == (10.9, 0.0)
 
 
 def test_line_strips_ending_punctuation_but_keeps_questions():

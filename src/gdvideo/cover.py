@@ -1,14 +1,14 @@
-"""cover: thumbnails with the logo, an emoji and the title -> export/cover-horizontal.jpg, cover-vertical.jpg."""
+"""cover: thumbnails with the logo, an emoji and the title on a frame of each recording
+-> export/cover-horizontal.jpg (YouTube), cover-vertical.jpg (TikTok, 抖音)."""
 import json
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
 
 from gdvideo.config import (COVER_AT, COVER_EMOJI, COVER_FONT, COVER_LAYOUT, COVER_LOGO, COVER_MAX_WIDTH, COVER_TILT,
-                            COVER_TITLE_COLOR, COVER_TITLE_SHADOW, COVER_TITLE_STROKE, COVER_TITLE_STROKE_W, EMOJI_FONT, FFMPEG, V_BG, V_H, V_W)
-from gdvideo.media import detect_side_bars, mode, probe, recording, run
-from gdvideo.render import output_duration, vertical_sizes
-from gdvideo.subtitles import starts
+                            COVER_TITLE_COLOR, COVER_TITLE_SHADOW, COVER_TITLE_STROKE, COVER_TITLE_STROKE_W, EMOJI_FONT,
+                            FFMPEG)
+from gdvideo.media import probe, recordings, run
 
 
 def parse_time(s):
@@ -119,52 +119,27 @@ def frame_time(at, duration):
     return parse_time(at) if at is not None else duration * COVER_AT
 
 
-def horizontal_frame(folder, at, path):
-    video = folder / "export" / "horizontal.mp4"
-    if not video.exists():
-        sys.exit(f"{video} not found. Render it first: gdvideo render <folder> --only horizontal")
-    t = frame_time(at, probe(video)[2])
-    run([FFMPEG, "-v", "error", "-y", "-ss", str(t), "-i", str(video), "-frames:v", "1", str(path)])
-    return t
-
-
-def vertical_frame(folder, at, path):
-    """The vertical layout (facecam on top, game below) built from the recordings, without subtitles."""
+def vertical_start(folder):
+    """Seconds into the vertical recording at horizontal t=0 (from subs.json; 0 before prep has run)."""
     subs = folder / "subs.json"
-    if not subs.exists():
-        sys.exit(f"{subs} not found. Run prep and clean first (the cover needs the start times).")
-    ipad_start, face_start = starts(json.loads(subs.read_text()))
-    game, face = recording(folder, "ipad"), recording(folder, "face")
-    gw, gh, dur = probe(game)
-    fw, fh, face_dur = probe(face)
-    gw, gx = detect_side_bars(game, dur)
-    face_h, game_h = vertical_sizes(gw, gh, fw, fh)
-    t = frame_time(at, output_duration(dur, face_dur, ipad_start, face_start))
-    vf = (f"[1:v]scale={V_W}:{face_h}[f];[0:v]crop={gw}:{gh}:{gx}:0,scale={V_W}:{game_h}[g];"
-          f"[f][g]vstack,pad={V_W}:{V_H}:0:0:{V_BG}")
-    run([FFMPEG, "-v", "error", "-y", "-ss", str(t + ipad_start), "-i", str(game),
-         "-ss", str(max(t + face_start, 0)), "-i", str(face),
-         "-filter_complex", vf, "-frames:v", "1", str(path)])
-    return t
+    return json.loads(subs.read_text()).get("vertical_start", 0) if subs.exists() else 0
 
 
-def single_frame(folder, at, path):
-    """A frame of the single recording, which already has the facecam in it."""
-    video = recording(folder, "video")
-    t = frame_time(at, probe(video)[2])
-    run([FFMPEG, "-v", "error", "-y", "-ss", str(t), "-i", str(video), "-frames:v", "1", str(path)])
-    return t
+def grab_frame(video, t, path):
+    run([FFMPEG, "-v", "error", "-y", "-ss", f"{max(t, 0):.3f}", "-i", str(video), "-frames:v", "1", str(path)])
 
 
 def cover(folder, text=None, at=None, formats=("horizontal", "vertical")):
-    """Single recording: one cover, export/cover.jpg, whatever `formats` says."""
+    """Both covers show the same moment: `at` on the horizontal recording's timeline (default COVER_AT of it)."""
     title = text or cover_title(folder)
     (folder / "work").mkdir(exist_ok=True)
     (folder / "export").mkdir(exist_ok=True)
-    frames = {"horizontal": horizontal_frame, "vertical": vertical_frame, "single": single_frame}
-    for fmt in ["single"] if mode(folder) == "single" else formats:
+    horizontal, vertical = recordings(folder)
+    t = frame_time(at, probe(horizontal)[2])
+    sources = {"horizontal": (horizontal, t), "vertical": (vertical, t + vertical_start(folder))}
+    for fmt in formats:
         frame_path = folder / "work" / f"cover-frame-{fmt}.png"
-        t = frames[fmt](folder, at, frame_path)
-        out = folder / "export" / ("cover.jpg" if fmt == "single" else f"cover-{fmt}.jpg")
+        grab_frame(*sources[fmt], frame_path)
+        out = folder / "export" / f"cover-{fmt}.jpg"
         compose(Image.open(frame_path), title, layout=fmt).save(out, quality=90)
         print(f"Wrote {out} (frame at {int(t) // 60}:{int(t) % 60:02d}, title \"{title}\")", file=sys.stderr)

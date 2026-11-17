@@ -4,7 +4,6 @@ import sys
 
 from gdvideo.claude import ask_json
 from gdvideo.config import GLOSSARY
-from gdvideo.subtitles import starts
 
 CLEAN_SCHEMA = {
     "type": "object",
@@ -74,13 +73,13 @@ def clean(folder, force=False):
     result = ask_json(prompt, CLEAN_SCHEMA, f"Cleaning {len(raw['cues'])} cues")
 
     cues = tidy_cues(result["cues"])
-    ipad_start, face_start = starts(raw)
-    subs.write_text(json.dumps({"ipad_start": ipad_start, "face_start": face_start,
-                                "language": raw["language"], "cues": cues},
+    subs.write_text(json.dumps({"vertical_start": raw.get("vertical_start", 0), "language": raw["language"],
+                                "cues": cues},
                                ensure_ascii=False, indent=1))
     print(f"Wrote {subs}: {len(cues)} cues", file=sys.stderr)
 
-    lines = [f"{int(r['start']) // 60}:{int(r['start']) % 60:02d}  {r['text']}  ({r['note']})" for r in result["review"]]
+    lines = [f"{int(r['start']) // 60}:{int(r['start']) % 60:02d}  {r['text']}  ({r['note']})" for r in result["review"]
+             if r["text"].strip()]
     (folder / "work" / "review.txt").write_text("\n".join(lines) + "\n")
     if lines:
         print("\nCheck these lines (edit subs.json, then run render again):", file=sys.stderr)

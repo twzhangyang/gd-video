@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PIL import Image, ImageFont
 
-from gdvideo.config import COVER_FONT
+from gdvideo.config import COVER_FONT, COVER_LAYOUT
 from gdvideo.cover import compose, parse_time, wrap_title
 
 
@@ -41,8 +41,9 @@ def test_compose_trims_transparent_logo_margins(tmp_path):
     logo.save(tmp_path / "logo.png")
     frame = Image.new("RGB", (1920, 1440), "black")
     out = compose(frame, "X", logo_path=tmp_path / "logo.png")
-    # trimmed logo is scaled to COVER_LOGO_WIDTH of the cover; its blue reaches the left margin at 3%
-    assert out.getpixel((round(1920 * 0.03) + 5, round(1440 * 0.22) + 5))[2] > 200
+    # the trimmed logo starts right at its layout position, without the empty margin
+    pos = COVER_LAYOUT["horizontal"]
+    assert out.getpixel((round(1920 * pos["logo_x"]) + 5, round(1440 * pos["logo_y"]) + 5))[2] > 200
 
 
 def test_compose_vertical_keeps_1080x1920(tmp_path):
@@ -55,11 +56,3 @@ def test_fit_title_prefers_one_line():
     from gdvideo.cover import fit_title
     font, lines = fit_title("Electroman Adventures", max_width=1500, max_size=130)
     assert lines == ["Electroman Adventures"] and font.size > 90
-
-
-def test_output_duration_ends_with_the_shorter_recording():
-    from gdvideo.render import output_duration
-    assert output_duration(200, 150, 0, 0) == 150       # facecam stopped first: cut the iPad
-    assert output_duration(171.6, 300, 0, 1.09) == 171.6  # iPad stopped first
-    assert output_duration(200, 190, 11, 0) == 189       # both trimmed at the start
-    assert output_duration(200, 150, 0, -5) == 155      # auto-sync: facecam started 5 s later (held frame)
