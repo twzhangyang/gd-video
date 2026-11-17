@@ -50,10 +50,10 @@ V_W, V_H = 1080, 1920
 VERTICAL_BITRATE = "12M"
 # Burned-in subtitles, px on the 1080x1920 frame. The apps cover roughly the bottom 300 px with their caption and
 # buttons; the recording's black band below the game (y 1506-1920) is free, so subtitles sit at its top.
-VERTICAL_SUB_BOTTOM = 320     # 抖音 (zh + en): px from the bottom edge to the bottom of the subtitles
+VERTICAL_SUB_BOTTOM = 360     # 抖音 (zh + en): px from the bottom edge to the bottom of the subtitles
 VERTICAL_SUB_BOTTOM_EN = 320  # TikTok (en only): same
 SUB_ZH_SIZE = 45              # Chinese line font size
-SUB_EN_SIZE = 40              # English line font size
+SUB_EN_SIZE = 38              # English line font size
 SUB_END_STRIP = "。.，,、；;：:"  # removed from the end of each subtitle line; ？！?! and … stay
 SUB_FONT = "Hiragino Sans GB"  # macOS system font with a real bold; PingFang loads only as Medium in libass
 
